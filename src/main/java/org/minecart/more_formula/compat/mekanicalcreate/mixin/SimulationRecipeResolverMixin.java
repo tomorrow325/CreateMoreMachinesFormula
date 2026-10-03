@@ -1,19 +1,99 @@
 package org.minecart.more_formula.compat.mekanicalcreate.mixin;
 
+import com.tterrag.registrate.util.entry.BlockEntry;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.yxiao233.createmoremachines.api.registry.BuiltInAdvancedMachineTypes;
+import org.minecart.more_formula.Config;
 import org.minecart.more_formula.compat.mekanicalcreate.MekanicalCreateRecipeGate;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Mixin(targets = "io.github.langqi99.mekanicalcreate.content.SimulationRecipeResolver", remap = false)
 public abstract class SimulationRecipeResolverMixin {
+    @Invoker(value = "collectCandidates", remap = false)
+    private static List<?> moreFormula$collectCandidates(
+            Level level, ItemStack module, ItemStack condition, boolean allowFluidProcessing) {
+        throw new AssertionError();
+    }
+
+    @Invoker(value = "appendDisplayRecipes", remap = false)
+    private static void moreFormula$appendDisplayRecipes(
+            List<?> displays, List<?> candidates, ItemStack module, ItemStack condition) {
+        throw new AssertionError();
+    }
+
+    @Inject(
+            method = "getDisplayRecipes(Lnet/minecraft/world/level/Level;Z)Ljava/util/List;",
+            at = @At("RETURN"), cancellable = true, remap = false)
+    private static void moreFormula$showMinimumTierModules(
+            Level level, boolean allowFluidProcessing,
+            CallbackInfoReturnable<List<?>> cir) {
+        List<Object> displays = new ArrayList<>();
+        Set<ResourceLocation> displayIds = new LinkedHashSet<>();
+
+        for (Object display : cir.getReturnValue()) {
+            ResourceLocation displayId = displayId(display);
+            ResourceLocation sourceId = MekanicalCreateRecipeGate.sourceRecipeId(displayId);
+            int requiredTier = Config.getRequiredTier(sourceId);
+            int moduleTier = MekanicalCreateRecipeGate.getModuleTier(displayModule(display));
+            if ((requiredTier == 0 || MekanicalCreateRecipeGate.isMinimumTier(moduleTier, requiredTier))
+                    && displayIds.add(displayId)) {
+                displays.add(display);
+            }
+        }
+
+        BuiltInAdvancedMachineTypes.AdvancedMachineType<?>[] machineTypes = allowFluidProcessing
+                ? new BuiltInAdvancedMachineTypes.AdvancedMachineType[]{
+                        BuiltInAdvancedMachineTypes.PRESS,
+                        BuiltInAdvancedMachineTypes.DEPLOYER,
+                        BuiltInAdvancedMachineTypes.MIXER,
+                        BuiltInAdvancedMachineTypes.SPOUT}
+                : new BuiltInAdvancedMachineTypes.AdvancedMachineType[]{
+                        BuiltInAdvancedMachineTypes.PRESS,
+                        BuiltInAdvancedMachineTypes.DEPLOYER};
+
+        for (int tier : new int[]{1, 2, 3, 4, Config.CREATIVE_TIER}) {
+            ResourceLocation tierId = ResourceLocation.fromNamespaceAndPath(
+                    "createmoremachines", tierName(tier));
+            for (BuiltInAdvancedMachineTypes.AdvancedMachineType<?> machineType : machineTypes) {
+                BlockEntry<?> machine = machineType.getAdvancedMechanicals().get(tierId);
+                if (machine == null) {
+                    continue;
+                }
+                ItemStack module = new ItemStack(machine.get().asItem());
+                List<?> candidates = moreFormula$collectCandidates(
+                        level, module, ItemStack.EMPTY, allowFluidProcessing);
+                List<?> minimumTierCandidates = MekanicalCreateRecipeGate
+                        .filterMinimumTierCandidates(module, candidates);
+                if (!minimumTierCandidates.isEmpty()) {
+                    List<Object> added = new ArrayList<>();
+                    moreFormula$appendDisplayRecipes(added, minimumTierCandidates, module, ItemStack.EMPTY);
+                    for (Object display : added) {
+                        if (displayIds.add(displayId(display))) {
+                            displays.add(display);
+                        }
+                    }
+                }
+            }
+        }
+
+        cir.setReturnValue(List.copyOf(displays));
+    }
+
     @Inject(
             method = "isSupportedModule(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/item/ItemStack;Z)Z",
             at = @At("RETURN"), cancellable = true, remap = false)
@@ -59,5 +139,33 @@ public abstract class SimulationRecipeResolverMixin {
             ItemStack selectedModule, ItemStack stepModule) {
         return ItemStack.isSameItemSameComponents(selectedModule, stepModule)
                 || MekanicalCreateRecipeGate.matchesSequenceModule(selectedModule, stepModule);
+    }
+
+    private static ResourceLocation displayId(Object display) {
+        return (ResourceLocation) invokeAccessor(display, "id");
+    }
+
+    private static ItemStack displayModule(Object display) {
+        return (ItemStack) invokeAccessor(display, "module");
+    }
+
+    private static Object invokeAccessor(Object target, String name) {
+        try {
+            Method accessor = target.getClass().getMethod(name);
+            return accessor.invoke(target);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException exception) {
+            throw new IllegalStateException("Unable to read Mekanical-Create JEI display", exception);
+        }
+    }
+
+    private static String tierName(int tier) {
+        return switch (tier) {
+            case Config.CREATIVE_TIER -> "creative";
+            case 1 -> "brass";
+            case 2 -> "netherite";
+            case 3 -> "end";
+            case 4 -> "beyond";
+            default -> "";
+        };
     }
 }

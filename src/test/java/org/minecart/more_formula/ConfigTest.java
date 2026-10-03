@@ -171,10 +171,20 @@ public final class ConfigTest {
         check("Mekanical-Create 派生 ID还原原配方", () -> MekanicalCreateRecipeGate.sourceRecipeId(
                 rl("create:pressing/iron/mekanicalcreate_pressing")).equals(
                 rl("create:pressing/iron")));
+        check("Mekanical-Create JEI 双派生 ID还原原配方", () -> MekanicalCreateRecipeGate.sourceRecipeId(
+                rl("create:pressing/iron/mekanicalcreate_pressing/mekanicalcreate_createmoremachines_brass_mechanical_press"))
+                .equals(rl("create:pressing/iron")));
         check("普通模块不能执行 NETHERITE 配方", () -> !MekanicalCreateRecipeGate.isAllowed(
                 0, 2));
         check("NETHERITE 模块可以执行 NETHERITE 配方", () -> MekanicalCreateRecipeGate.isAllowed(
                 2, 2));
+        check("JEI 最低机器与黄铜门槛匹配", () -> MekanicalCreateRecipeGate.isMinimumTier(1, 1));
+        check("JEI 不把低级机器显示为最低机器", () -> !MekanicalCreateRecipeGate.isMinimumTier(1, 2));
+        check("JEI 不为高级机器重复显示低门槛配方", () -> !MekanicalCreateRecipeGate.isMinimumTier(3, 2));
+        check("JEI 创造门槛只匹配创造模块", () -> MekanicalCreateRecipeGate.isMinimumTier(
+                Config.CREATIVE_TIER, Config.CREATIVE_TIER)
+                && !MekanicalCreateRecipeGate.isMinimumTier(4, Config.CREATIVE_TIER));
+        check("JEI 无门槛配方不生成分级机器行", () -> !MekanicalCreateRecipeGate.isMinimumTier(1, 0));
 
         // ---- Mekanical-Create：按机器类别和 CMM 等级读取倍率 ----
         check("Brass 默认 1 倍", () -> MekanicalCreateSpeedConfig.defaultMultiplier(1) == 1);

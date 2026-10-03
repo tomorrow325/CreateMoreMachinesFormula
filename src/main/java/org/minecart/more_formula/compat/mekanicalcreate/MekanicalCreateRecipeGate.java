@@ -161,11 +161,19 @@ public final class MekanicalCreateRecipeGate {
                 || moduleTier >= requiredTier;
     }
 
+    public static boolean isMinimumTier(int moduleTier, int requiredTier) {
+        if (requiredTier == Config.CREATIVE_TIER) {
+            return moduleTier == Config.CREATIVE_TIER;
+        }
+        return requiredTier >= Config.MIN_TIER && requiredTier <= Config.MAX_TIER
+                && moduleTier == requiredTier;
+    }
+
     public static ResourceLocation sourceRecipeId(ResourceLocation candidateId) {
         if (candidateId == null) {
             return null;
         }
-        int suffixIndex = candidateId.getPath().lastIndexOf(CANDIDATE_SUFFIX);
+        int suffixIndex = candidateId.getPath().indexOf(CANDIDATE_SUFFIX);
         if (suffixIndex < 0) {
             return candidateId;
         }
@@ -186,6 +194,18 @@ public final class MekanicalCreateRecipeGate {
             }
         }
         return List.copyOf(allowed);
+    }
+
+    public static List<?> filterMinimumTierCandidates(ItemStack module, List<?> candidates) {
+        int moduleTier = getModuleTier(module);
+        List<Object> minimumTier = new ArrayList<>(candidates.size());
+        for (Object candidate : candidates) {
+            ResourceLocation recipeId = sourceRecipeId(getCandidateId(candidate));
+            if (isMinimumTier(moduleTier, Config.getRequiredTier(recipeId))) {
+                minimumTier.add(candidate);
+            }
+        }
+        return List.copyOf(minimumTier);
     }
 
     private static ResourceLocation getCandidateId(Object candidate) {
