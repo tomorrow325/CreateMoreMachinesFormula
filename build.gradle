@@ -43,7 +43,7 @@ repositories {
 }
 
 base {
-    archivesName = mod_id
+    archivesName = archives_base_name
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
@@ -225,7 +225,7 @@ neoForge.ideSyncTask generateModMetadata
 publishing {
     publications {
         register('mavenJava', MavenPublication) {
-            artifactId = 'more_formula'
+            artifactId = 'CreateMoreMachinesFormula'
             from components.java
         }
     }

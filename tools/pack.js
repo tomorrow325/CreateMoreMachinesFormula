@@ -1,4 +1,4 @@
-// 打包 more_formula：classes + resources + 展开占位符后的 neoforge.mods.toml。
+// 打包 CreateMoreMachinesFormula：classes + resources + 展开占位符后的 neoforge.mods.toml。
 //
 // 对应 build.gradle 里的三件事：
 //   1) ProcessResources 展开 src/main/templates/META-INF/neoforge.mods.toml 的 ${} 占位符；
@@ -60,7 +60,7 @@ fs.writeFileSync(path.join(stage, 'META-INF', 'neoforge.mods.toml'), toml, 'utf8
 // ---- jar ----
 const outDir = path.join(ROOT, 'build', 'libs');
 fs.mkdirSync(outDir, { recursive: true });
-const outJar = path.join(outDir, `${props.mod_id}-${modVersion}.jar`);
+const outJar = path.join(outDir, `${props.archives_base_name || props.mod_id}-${modVersion}.jar`);
 fs.rmSync(outJar, { force: true });
 
 execFileSync(JAR, ['--create', '--file', outJar, '-C', stage, '.'], { stdio: 'inherit' });

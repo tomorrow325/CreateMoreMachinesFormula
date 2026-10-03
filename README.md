@@ -31,6 +31,10 @@
    新增 `.gitattributes` 强制文本文件使用 LF（`.bat`/`.cmd` 保持 CRLF），
    保证在不同系统上 clone 后构建出的 jar 内容逐字节一致。
 
+5. **项目更名为 CreateMoreMachinesFormula**
+   构建产物 JAR 名称与游戏内显示的模组名称更名为 `CreateMoreMachinesFormula`；
+   `mod_id` 仍为 `more_formula`，命名空间与脚本 API 不变，现有 KubeJS 脚本与配置无需改动。
+
 两个可选依赖在未安装时自动停用，不影响启动。
 
 ## 0.0.2 修复说明
@@ -110,7 +114,7 @@
 
 1. 安装 NeoForge 1.21.1。
 2. 安装 Create、Create: More Machines、KubeJS 和 KubeJS-Create。
-3. 将 `more_formula` 的 JAR 文件放入游戏的 `mods` 文件夹。
+3. 将 `CreateMoreMachinesFormula` 的 JAR 文件放入游戏的 `mods` 文件夹。
 4. 启动游戏。
 
 ## KubeJS 用法
@@ -232,7 +236,7 @@ Windows：
 gradlew.bat build
 ```
 
-构建产物位于 `build/libs/more_formula-版本号.jar`。
+构建产物位于 `build/libs/CreateMoreMachinesFormula-版本号.jar`。
 
 ## 文档与许可证
 
