@@ -1,7 +1,6 @@
 @echo off
 REM more_formula build entry point. Real logic lives in tools\build.js.
-REM See BUILD.md for why this project does not use Gradle here,
-REM and for the four javac/argfile pitfalls.
+REM This is the offline fallback for when Gradle cannot reach the plugin/maven repos.
 cd /d "%~dp0"
 
 REM Point JAVA_HOME at a JDK 21 install. Adjust if yours is elsewhere.

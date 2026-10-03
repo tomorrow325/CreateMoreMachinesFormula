@@ -6,6 +6,33 @@
 
 本mod由ai辅助开发
 
+## 0.0.3b 更新说明
+
+0.0.2 之后的改动：
+
+1. **可选接入 Mekanical-Create（0.2.8+）**
+   装有该模组时，CMM 模块会为 Mekanical-Create 的机器提供速度/并行加成：
+   模拟腔（Simulation Chamber）的并行 lane 数按模块倍率放大；
+   工厂多方块（Factory）每 tick 的 work budget 按最高启用催化剂的倍率放大，
+   单条配方的总能耗不重复放大；多催化剂同时生效时取最高倍率而非相乘。
+   倍率可在服务器配置中按 4 类机器（压机/部署器/搅拌器/喷口）× 5 个 CMM 等级调整，
+   范围 1–64，默认 1/2/3/4/4。
+
+2. **Mekanical-Create 的 JEI 显示按「最低适用机器」过滤**
+   每个配方在 JEI 里只显示刚好满足其门槛的最低档机器，创造级门槛只匹配创造模块，
+   高级模块不再把低门槛配方重复刷屏；
+   同时修复了 JEI 双重派生 ID（模块行内再嵌套一层）无法还原原配方 ID 的问题。
+
+3. **可选接入 Create: Hand Made（0.2.0-beta+）**
+   手工工具（手锯、研钵、压锤、灌注枪、指杆、搅拌棒、风箱）只能处理未设门槛（Tier.ZERO）的配方，
+   防止用手工方式绕过机器等级门槛。
+
+4. **统一换行符**
+   新增 `.gitattributes` 强制文本文件使用 LF（`.bat`/`.cmd` 保持 CRLF），
+   保证在不同系统上 clone 后构建出的 jar 内容逐字节一致。
+
+两个可选依赖在未安装时自动停用，不影响启动。
+
 ## 0.0.2 修复说明
 
 0.0.1 存在下列问题，0.0.2 已全部修复：
@@ -48,6 +75,13 @@
 | Create: More Machines | 2.7 或更高版本 |
 | KubeJS | 2101.7.2-build.285 或更高版本 |
 | KubeJS-Create | 2101.3.1-build.18 或更高版本 |
+
+可选依赖（未安装时对应功能自动停用，不影响启动）：
+
+| 依赖 | 版本要求 |
+|------|----------|
+| Create: Hand Made | 0.2.0-beta 或更高版本 |
+| Mekanical-Create | 0.2.8 或更高版本（需 Mekanism） |
 
 ## 功能
 
@@ -200,13 +234,8 @@ gradlew.bat build
 
 构建产物位于 `build/libs/more_formula-版本号.jar`。
 
-> ⚠️ **本开发机无法用 Gradle 构建**：`maven.neoforged.net`、`maven.latvian.dev`、
-> `plugins.gradle.org` 在本机均不可达。本机请改用手工流程 —— 直接运行
-> `build_run.cmd`，详见 [BUILD.md](BUILD.md)。
-
 ## 文档与许可证
 
 - **KubeJS 编写指南（权威，推荐先读）**：[docs/more_formula-KubeJS编写指南.md](docs/more_formula-KubeJS编写指南.md)
 - KubeJS 简版说明（旧）：[docs/KubeJS使用说明.md](docs/KubeJS使用说明.md)
-- 本机构建说明：[BUILD.md](BUILD.md)
 - 许可证：MIT，见 [LICENSE](LICENSE)

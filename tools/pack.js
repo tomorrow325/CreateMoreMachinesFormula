@@ -4,7 +4,7 @@
 //   1) ProcessResources 展开 src/main/templates/META-INF/neoforge.mods.toml 的 ${} 占位符；
 //   2) sourceSets.main.resources 纳入 src/main/resources；
 //   3) jar 任务把两者与编译产物一起打包。
-// 因为本机 Gradle 插件仓库不通，这里手工复刻同样的结果。
+// 这是 Gradle 不可用时的离线等价流程，手工复刻同样的结果。
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');

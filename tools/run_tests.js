@@ -29,7 +29,7 @@ const cpIdx = argsLines.indexOf('-cp');
 const curated = argsLines[cpIdx + 1].replace(/^"|"$/g, '');
 
 // 补上 MC 运行时真正需要、但编译期不需要的模块（netty、modlauncher、securejarhandler 等）。
-// 这些在 modules-2 缓存里都有，按坐标取即可 —— 不依赖本机任何其它工程的产物。
+// 这些在 modules-2 缓存里都有，按坐标取即可 —— 不依赖任何其它工程的产物。
 const RUNTIME_EXTRA = [
   ['cpw.mods', 'modlauncher', '11.0.5'],
   ['cpw.mods', 'securejarhandler', '3.0.8'],

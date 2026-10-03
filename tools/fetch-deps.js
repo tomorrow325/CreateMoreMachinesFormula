@@ -37,7 +37,7 @@ function findCreateJar() {
 /** 列出 create jar 里的 jarJar 条目。 */
 function listJarJar(src) {
   const want = (l) => /^META-INF\/jarjar\/.+\.jar$/.test(l);
-  // 优先用 JDK 的 jar；本机 PATH 上可能没有 jar，所以带纯 Node 兜底
+  // 优先用 JDK 的 jar；PATH 上可能没有 jar，所以带纯 Node 兜底
   try {
     const out = execFileSync(findTool('jar'), ['-tf', src], { encoding: 'utf8' });
     const names = out.split(/\r?\n/).map((s) => s.trim()).filter(want);

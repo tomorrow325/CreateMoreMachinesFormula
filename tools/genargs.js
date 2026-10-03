@@ -1,8 +1,7 @@
 // 生成 javac 的 @argfile。
 //
-// 为什么不用 Gradle：本机 maven.neoforged.net / maven.latvian.dev / plugins.gradle.org
-// 均不可达（curl 返回 000），ModDevGradle 无法解析。改为复用 Gradle 缓存里已经解好的
-// MC+NeoForge 合并包（ng_execute/outputs.jar）手工 javac，与 JEIGuess 工程同一套路。
+// 为什么不用 Gradle：当 Maven 仓库（maven.neoforged.net 等）不可达、ModDevGradle 无法解析时，
+// 可以复用 Gradle 缓存里已经解好的 MC+NeoForge 合并包（ng_execute/outputs.jar）手工 javac。
 //
 // 两个必须遵守的约束（都踩过）：
 //  1) javac 对 argfile 里的反斜杠做转义 —— 所有路径统一转成正斜杠；

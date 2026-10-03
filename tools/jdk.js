@@ -1,7 +1,7 @@
 // 定位 JDK 里的工具（java / javac / jar），并提供一个纯 Node 的 zip 解压兜底。
 //
-// 为什么需要它：本机 PATH 上的 java/javac 是 Oracle 的 javapath 转发器，
-// **不含 jar**。所以不能假设 `jar` 一定可执行 —— 否则别人 clone 下来第一步就 ENOENT。
+// 为什么需要它：Windows 的 PATH 上常见 Oracle javapath 转发器，**不含 jar**。
+// 所以不能假设 `jar` 一定可执行 —— 否则 clone 下来第一步就 ENOENT。
 //
 // 查找顺序：
 //   1) JAVA_HOME/bin/<tool>

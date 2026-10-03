@@ -1,4 +1,4 @@
-# 统一换行符，保证「clone 后构建」的产物与开发机逐字节一致。
+# 统一换行符，保证「clone 后构建」的产物逐字节一致。
 #
 # 为什么需要它：git 默认 core.autocrlf=true 会在检出时把文本文件转成 CRLF，
 # 而本模组会把 resources 原样打进 jar（kubejs.plugins.txt、mixins.json、lang/*.json 等），
