@@ -26,6 +26,9 @@ public final class MekanicalCreateSpeedConfig {
         defineKind(builder, values, MekanicalCreateRecipeGate.ModuleKind.DEPLOYER, "deployer");
         defineKind(builder, values, MekanicalCreateRecipeGate.ModuleKind.MIXER, "mixer");
         defineKind(builder, values, MekanicalCreateRecipeGate.ModuleKind.SPOUT, "spout");
+        // CMMM（可选依赖）的分级破碎轮/分级锯作为模块时同样吃按档倍率。
+        defineKind(builder, values, MekanicalCreateRecipeGate.ModuleKind.CRUSHING_WHEEL, "crushing_wheel");
+        defineKind(builder, values, MekanicalCreateRecipeGate.ModuleKind.SAW, "saw");
         builder.pop();
         SPEC = builder.build();
         VALUES = Map.copyOf(values);

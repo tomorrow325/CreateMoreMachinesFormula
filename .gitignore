@@ -37,5 +37,8 @@ node_modules/
 # Windows device-name leftovers from a failed shell redirection
 NUL
 
+# 游戏运行日志
+logs/
+
 # 本机构建说明：只留在本地，不进公开仓库
 BUILD.md

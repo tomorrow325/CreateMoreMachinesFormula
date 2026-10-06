@@ -20,6 +20,10 @@ public final class HandMadeRecipeGate {
     }
 
     public static List<RecipeHolder<?>> onlyTierZero(List<?> recipes) {
+        if (recipes == null) {
+            // 空值面按「拒绝」处理：无输入即无可放行配方，与 isTierZero(null)==false 同语义。
+            return List.of();
+        }
         List<RecipeHolder<?>> filtered = new ArrayList<>();
         for (Object recipe : recipes) {
             if (recipe instanceof RecipeHolder<?> holder && isTierZero(holder)) {

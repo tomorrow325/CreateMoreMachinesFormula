@@ -73,8 +73,9 @@ public class TieredSequencedAssemblyCategory extends CreateRecipeCategory<Sequen
                 return new TieredAssemblyDeploying(context);
             }
             if (assembly instanceof CuttingRecipe) {
-                // CMM 没有分级锯（SAW 在 CMMTierPlugin 里被 withoutAll 掉了），委托原版锯渲染。
-                return new TieredAssemblyCutting();
+                // CMMM 在场且该档注册了分级锯（context.sawState() 非 null）时渲染分级锯，
+                // 否则（CMM 本体 / CMMM 缺席）委托原版锯渲染。
+                return new TieredAssemblyCutting(context);
             }
             return new TieredAssemblyPressing(context);
         });

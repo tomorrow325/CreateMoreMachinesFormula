@@ -77,8 +77,20 @@ public class TierHelper {
      * {@code CMMMTierBridge}（该类只在前缀命中时才会被加载，内部才能安全地
      * 直接引用 CMMM 类型）。
      */
+    /**
+     * 纯函数：给定类名是否落在可选依赖 CreateMoreMoreMachines 的包名下。
+     * 前缀未命中（含 {@code null}/空串）时返回 {@code false}，且**绝不**触碰桥接类。
+     *
+     * <p>设为 public 是刻意的离线测试缝：{@code externalMachineTier} 需要
+     * BlockEntity 实例（离线构造不可行），而这条「前缀未命中 → 0、不加载桥接」的
+     * 半边规则可以脱离游戏进程用字符串直接断言。
+     */
+    public static boolean isCMMMClassName(String className) {
+        return className != null && className.startsWith(CMMM_PACKAGE);
+    }
+
     private static int externalMachineTier(BlockEntity machine) {
-        if (!machine.getClass().getName().startsWith(CMMM_PACKAGE)) {
+        if (!isCMMMClassName(machine.getClass().getName())) {
             return 0;
         }
         try {

@@ -13,6 +13,8 @@ import java.util.List;
 
 public final class MekanicalCreateRecipeGate {
     private static final String CMM_NAMESPACE = "createmoremachines";
+    /** 可选依赖 CreateMoreMoreMachines 的命名空间：分级机器与 CMM 共享 CMMTier 实例，同语义识别。 */
+    private static final String CMMM_NAMESPACE = "createmoremoremachines";
     private static final String CANDIDATE_SUFFIX = "/mekanicalcreate_";
     private static volatile Method candidateIdAccessor;
 
@@ -21,7 +23,9 @@ public final class MekanicalCreateRecipeGate {
         DEPLOYER,
         PRESS,
         MIXER,
-        SPOUT
+        SPOUT,
+        CRUSHING_WHEEL,
+        SAW
     }
 
     private MekanicalCreateRecipeGate() {
@@ -32,7 +36,7 @@ public final class MekanicalCreateRecipeGate {
     }
 
     public static ModuleKind getModuleKind(ResourceLocation moduleId) {
-        if (moduleId == null || !CMM_NAMESPACE.equals(moduleId.getNamespace())) {
+        if (moduleId == null || !isTieredModuleNamespace(moduleId.getNamespace())) {
             return ModuleKind.NONE;
         }
         String path = moduleId.getPath();
@@ -47,6 +51,12 @@ public final class MekanicalCreateRecipeGate {
         }
         if (hasTieredMachineName(path, "spout")) {
             return ModuleKind.SPOUT;
+        }
+        if (hasTieredMachineName(path, "crushing_wheel")) {
+            return ModuleKind.CRUSHING_WHEEL;
+        }
+        if (hasTieredMachineName(path, "mechanical_saw")) {
+            return ModuleKind.SAW;
         }
         return ModuleKind.NONE;
     }
@@ -64,6 +74,7 @@ public final class MekanicalCreateRecipeGate {
     public static boolean isSupportedModule(ResourceLocation moduleId, boolean allowFluidProcessing) {
         ModuleKind kind = getModuleKind(moduleId);
         return kind == ModuleKind.DEPLOYER || kind == ModuleKind.PRESS
+                || kind == ModuleKind.CRUSHING_WHEEL || kind == ModuleKind.SAW
                 || allowFluidProcessing && (kind == ModuleKind.MIXER || kind == ModuleKind.SPOUT);
     }
 
@@ -93,6 +104,8 @@ public final class MekanicalCreateRecipeGate {
             case PRESS -> path.equals("mechanical_press");
             case MIXER -> path.equals("mechanical_mixer");
             case SPOUT -> path.equals("spout");
+            case CRUSHING_WHEEL -> path.equals("crushing_wheel");
+            case SAW -> path.equals("mechanical_saw");
             case NONE -> false;
         };
     }
@@ -117,7 +130,9 @@ public final class MekanicalCreateRecipeGate {
             case DEPLOYER -> path.equals("deployer");
             case PRESS -> path.equals("mechanical_press");
             case SPOUT -> path.equals("spout");
-            case MIXER, NONE -> false;
+            case SAW -> path.equals("mechanical_saw");
+            // 破碎不是序列装配步骤；混合/未知机器也不参与序列加成映射。
+            case CRUSHING_WHEEL, MIXER, NONE -> false;
         };
     }
 
@@ -129,8 +144,13 @@ public final class MekanicalCreateRecipeGate {
                 || path.equals("beyond_" + machineName);
     }
 
+    /** CMM 本体与可选依赖 CMMM 的分级机器都挂在这两个命名空间下。 */
+    private static boolean isTieredModuleNamespace(String namespace) {
+        return CMM_NAMESPACE.equals(namespace) || CMMM_NAMESPACE.equals(namespace);
+    }
+
     public static int getModuleTier(ResourceLocation moduleId) {
-        if (moduleId == null || !CMM_NAMESPACE.equals(moduleId.getNamespace())) {
+        if (moduleId == null || !isTieredModuleNamespace(moduleId.getNamespace())) {
             return 0;
         }
         String path = moduleId.getPath();

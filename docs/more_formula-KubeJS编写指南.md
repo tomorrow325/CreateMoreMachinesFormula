@@ -215,18 +215,22 @@ MoreFormulaEvents.registerTier(event => {
 | `create:item_application` | `event.recipes.create.item_application(...)` | 高级部署器 | 部署器配方搜索事件 |
 | `create:sequenced_assembly` | `event.recipes.create.sequenced_assembly(...)` | 取决于各工序用到的机器 | 见 [第 7 节](#7-装配线专题重点) |
 
-### ❌ 不要设门槛（CMM 没有对应高级机器）
+### ⚠️ 粉碎轮 / 石磨 / 锯切：需要可选依赖 CMMM
+
+`create:crushing`（粉碎轮）、`create:milling`（石磨／碾磨）、`create:cutting`（锯切）
+在安装可选依赖 **CreateMoreMoreMachines（CMMM）** 后即有对应分级机器
+（五档分级破碎轮、分级机械锯；CMMM 没有分级磨石，milling 同样由分级破碎轮控制器执行），
+可以正常设门槛。**未安装 CMMM 时给这些设门槛 → 配方永远无法完成**，不要设。
+
+> 关于锯切：CMM 2.7 本体**完全没有发布任何高级锯** —— 它在自己的 tier 插件里对 `SAW` 直接调用了 `withoutAll()`（已用字节码确认），jar 内也没有任何 saw 的模型/贴图。可选依赖 CMMM 补上了五档分级锯与分级破碎轮；只装 CMM 2.7 时这三类仍然没有高级版。
+
+### ❌ 不要设门槛（任何环境都没有对应高级机器）
 
 给这些设门槛 → **配方永远无法完成**：
 
-- `create:crushing`（粉碎轮）
-- `create:milling`（石磨／碾磨）
 - `create:splashing`（喷溅）
-- `create:cutting`（锯切）
 - `create:emptying`（排空）
 - 流体储罐、蒸汽引擎相关配方
-
-> 关于锯切：CMM 2.7 实际上**完全没有发布任何高级锯** —— 它在自己的 tier 插件里对 `SAW` 直接调用了 `withoutAll()`（已用字节码确认），jar 内也没有任何 saw 的模型/贴图。所以锯切是真的没有高级版。
 
 ---
 
@@ -398,7 +402,7 @@ console.info('[门槛自检] 当前用到过的全部等级 = ' + MoreFormula.ge
 
 | 症状 | 原因 | 处理 |
 |---|---|---|
-| 配方永远做不出来 | 给没有高级机器的类型设了门槛（crushing/milling/splashing/cutting/emptying） | 删掉该门槛 |
+| 配方永远做不出来 | 未装 CMMM 时给 crushing/milling/cutting 设了门槛，或给 splashing/emptying 设了门槛 | 删掉该门槛，或安装 CMMM |
 | 配方永远做不出来 | 门槛设太高，你手上没有对应等级的机器 | 降门槛，或造高级机器 |
 | JEI 里找不到这条配方 | 门槛命中的配方会从原版分类移出、进分级分类 | 在 JEI 里找「黄铜级xx」这类**分级分类**标签 |
 | 装配线跑到别的线去了 | 起始输入物和已有装配线撞车 | 换一个冷门输入物（见 7.3） |
