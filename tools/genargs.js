@@ -19,6 +19,9 @@ const GRADLE_HOME = process.env.GRADLE_USER_HOME
 const MODULE_CACHE = toSlash(path.join(GRADLE_HOME, 'caches', 'modules-2', 'files-2.1'));
 
 // 在模块缓存里找一个构件；同版本多个 hash 目录时取第一个。
+// 坑：gradle 缓存里同一构件常同时有 binary / -sources / -javadoc 三个 hash 目录，
+// readdirSync 的顺序不保证 binary 在前 —— 曾经挑到过 -javadoc.jar，
+// javac 看不到任何类，报「程序包 xxx 不存在」。所以排除顺序必须把 javadoc 一起排掉。
 function cached(group, artifact, version) {
   const dir = path.join(MODULE_CACHE, group, artifact, version);
   if (!fs.existsSync(dir)) throw new Error('missing in module cache: ' + group + ':' + artifact + ':' + version);
@@ -31,7 +34,7 @@ function cached(group, artifact, version) {
     }
   })(dir);
   if (!found.length) throw new Error('no jar in ' + dir);
-  return found.find((f) => !f.endsWith('-sources.jar')) || found[0];
+  return found.find((f) => !f.endsWith('-sources.jar') && !f.endsWith('-javadoc.jar')) || found[0];
 }
 
 // 已解好的 Minecraft + NeoForge 合并包（neoforge 21.1.248 / MC 1.21.1）。
@@ -61,6 +64,52 @@ function mergedMinecraft() {
   return big[0].jar;
 }
 
+// Mixin 注解 API（org.spongepowered.asm.mixin.*，编译 @Mixin 类必需）。
+// 坑：org.spongepowered:mixin:0.8.5 不在 Maven Central，本机 modules-2 缓存里
+// 也没有（只有 NeoForge 21.1 运行时真正带的 Fabric fork
+// net.fabricmc:sponge-mixin，包名与注解签名不变）。javac 只用注解，
+// 两者兼容 —— 优先 0.8.5，缓存里没有时回退到 sponge-mixin。
+function mixinJar() {
+  try {
+    return cached('org.spongepowered', 'mixin', '0.8.5');
+  } catch {
+    const dir = path.join(MODULE_CACHE, 'net.fabricmc', 'sponge-mixin');
+    const versions = fs.existsSync(dir) ? fs.readdirSync(dir) : [];
+    for (const v of versions) {
+      try {
+        const jar = cached('net.fabricmc', 'sponge-mixin', v);
+        if (!jar.endsWith('-sources.jar')) return jar;
+      } catch {
+        // 该版本目录下没有 jar，试下一个版本
+      }
+    }
+    throw new Error('missing mixin in module cache: org.spongepowered:mixin:0.8.5 与 net.fabricmc:sponge-mixin 均不存在');
+  }
+}
+
+// MixinExtras 注解（@ModifyExpressionValue / @WrapOperation 等，
+// mekanicalcreate 兼容 mixin 在用）。不在 genargs 的固定坐标清单里 ——
+// 本机缓存里只有 io.github.llamalad7:mixinextras-neoforge（含完整注解类），
+// 优先 common 构件，没有时回退 neoforge 变体。
+function mixinExtrasJar() {
+  const candidates = [
+    ['io.github.llamalad7', 'mixinextras-common'],
+    ['io.github.llamalad7', 'mixinextras-neoforge'],
+  ];
+  for (const [group, artifact] of candidates) {
+    const dir = path.join(MODULE_CACHE, group, artifact);
+    if (!fs.existsSync(dir)) continue;
+    for (const v of fs.readdirSync(dir)) {
+      try {
+        return cached(group, artifact, v);
+      } catch {
+        // 该版本目录下没有可用的 jar，试下一个版本
+      }
+    }
+  }
+  throw new Error('missing MixinExtras in module cache: io.github.llamalad7:mixinextras-common / mixinextras-neoforge 均不存在');
+}
+
 const CP = [
   mergedMinecraft(),
   cached('com.mojang', 'authlib', '6.0.54'),
@@ -81,7 +130,8 @@ const CP = [
   cached('net.neoforged', 'srgutils', '1.0.0'),
   cached('net.neoforged.fancymodloader', 'loader', '4.0.42'),
   cached('net.neoforged.fancymodloader', 'earlydisplay', '4.0.42'),
-  cached('org.spongepowered', 'mixin', '0.8.5'),
+  mixinJar(),
+  mixinExtrasJar(),
   cached('org.ow2.asm', 'asm', '9.10.1'),
   cached('org.ow2.asm', 'asm-tree', '9.10.1'),
   cached('org.ow2.asm', 'asm-analysis', '9.10.1'),

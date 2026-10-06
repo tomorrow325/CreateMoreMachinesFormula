@@ -176,6 +176,11 @@ dependencies {
     def mekanismJars = fileTree(dir: 'libs', include: ['mekanism-*.jar'])
     compileOnly mekanismJars
     runtimeOnly mekanismJars
+
+    // CreateMoreMoreMachines is optional. Put its jar in libs/ only when developing with it.
+    def createMoreMoreMachinesJars = fileTree(dir: 'libs', include: ['createmoremoremachines-*.jar'])
+    compileOnly createMoreMoreMachinesJars
+    runtimeOnly createMoreMoreMachinesJars
 }
 
 // ConfigTest is a main()-style regression suite rather than a JUnit test,
@@ -208,7 +213,8 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
                              mod_authors            : mod_authors,
                              mod_description        : mod_description,
                              create_hand_made_version: create_hand_made_version,
-                             mekanicalcreate_version : mekanicalcreate_version]
+                             mekanicalcreate_version : mekanicalcreate_version,
+                             createmoremoremachines_version: createmoremoremachines_version]
     inputs.properties replaceProperties
     expand replaceProperties
     from "src/main/templates"

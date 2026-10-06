@@ -50,6 +50,10 @@ config = "${mod_id}-handmade.mixins.json"
 [[mixins]]
 config = "${mod_id}-mekanicalcreate.mixins.json"
 
+# Optional CreateMoreMoreMachines integration; its mixins are gated by mod presence.
+[[mixins]]
+config = "${mod_id}-createmoremoremachines.mixins.json"
+
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
 #[[accessTransformers]]
@@ -126,6 +130,15 @@ side = "BOTH"
 modId = "mekanicalcreate"
 type = "optional"
 versionRange = "[${mekanicalcreate_version},)"
+ordering = "AFTER"
+side = "BOTH"
+
+# CreateMoreMoreMachines is optional; when present, More Formula gates its tiered
+# crushing wheels and mechanical saws like the CMM machines.
+[[dependencies."${mod_id}"]]
+modId = "createmoremoremachines"
+type = "optional"
+versionRange = "[${createmoremoremachines_version},)"
 ordering = "AFTER"
 side = "BOTH"
 

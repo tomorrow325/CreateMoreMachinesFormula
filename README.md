@@ -80,12 +80,13 @@
 | KubeJS | 2101.7.2-build.285 或更高版本 |
 | KubeJS-Create | 2101.3.1-build.18 或更高版本 |
 
-可选依赖（未安装时对应功能自动停用，不影响启动）：
+可选依赖（未安装时对应兼容完全不生效，也不影响启动）：
 
-| 依赖 | 版本要求 |
-|------|----------|
-| Create: Hand Made | 0.2.0-beta 或更高版本 |
-| Mekanical-Create | 0.2.8 或更高版本（需 Mekanism） |
+| 模组 | modId | 版本要求 | 作用 |
+|------|-------|----------|------|
+| Create: Hand Made | `create_hand_made` | 0.2.0-beta 或更高 | 手工机器只允许处理 `Tier.ZERO` 配方 |
+| Mekanical-Create | `mekanicalcreate` | 0.2.8 或更高（需 Mekanism） | 按 CMM 模块等级提供速度/并行加成（服务器 TOML 配置可调） |
+| CreateMoreMoreMachines | `createmoremoremachines` | 1.21.1-1.0 或更高 | 分级破碎轮/磨石/机械锯纳入等级门槛（见下方配方类型说明） |
 
 ## 功能
 
@@ -182,14 +183,21 @@ ServerEvents.recipes(event => {
 - `create:item_application`：拿物品的机械手
 - `create:sequenced_assembly`：序列装配
 
-以下类型没有对应的 CMM 高级机器，因此不建议设置门槛：
+以下类型在**原版 CMM** 里没有对应高级机器：
 
-- `create:crushing`
-- `create:milling`
-- `create:splashing`
-- `create:cutting`
+- `create:crushing` / `create:milling`：破碎轮 / 磨石
+- `create:cutting`（含切石）：机械锯
+- `create:splashing`：鼓风嘴
 - `create:emptying`
 - 流体储罐和蒸汽引擎相关配方
+
+其中破碎、研磨、锯切三类在安装可选依赖 **CreateMoreMoreMachines** 后即有对应分级机器
+（分级破碎轮/磨石、分级机械锯），可以正常设置门槛；**未安装时不要给这些类型设门槛**，
+否则配方将无法被任何机器执行。另有两点机器原生行为需要注意：
+
+- 分级破碎轮对"等级不够"的配方按原版「无配方」处理：物品在倒计时结束后被研磨掉
+  （破碎轮对不可研磨物品的原生表现就是销毁，不存在"原样退回"）；
+- 分级机械锯与磨石则是无损的：不满足门槛的配方按"无匹配配方"处理，物品原样退回。
 
 ## 按 ID 设置门槛
 

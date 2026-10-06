@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "org.minecart.more_formula.compat.createmoremoremachines.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "org.minecart.more_formula.compat.createmoremoremachines.MoreFormulaCreateMoreMoreMachinesMixinConfigPlugin",
+  "mixins": [
+    "CMMMCrushingWheelControllerBlockEntityMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -18,6 +18,9 @@ import net.yxiao233.createmoremachines.api.content.mechanical.press.CMMMechanica
 import net.yxiao233.createmoremachines.api.content.spout.CMMSpoutBlockEntity;
 import org.jetbrains.annotations.Nullable;
 import org.minecart.more_formula.Config;
+import org.minecart.more_formula.More_formula;
+
+import java.lang.reflect.Method;
 
 public class TierHelper {
 
@@ -28,6 +31,18 @@ public class TierHelper {
      * {@code <= 1} 的（含 creative 的 -1）原样返回。
      */
     private static final int CMM_TIER_OFFSET = 1;
+
+    /**
+     * 可选依赖 CreateMoreMoreMachines 的方块实体包名前缀。只做字符串比较、
+     * 不解析任何类：命中前缀才说明该模组确实在场，此时才允许去加载桥接类
+     * （见 {@link #externalMachineTier}）。
+     */
+    private static final String CMMM_PACKAGE = "net.tomorrow325.createmoremoremachines.";
+    /** 反射桥接类：内部对 CMMM 类型的直接引用在未安装时绝不能被类加载。 */
+    private static final String CMMM_BRIDGE =
+            "org.minecart.more_formula.compat.createmoremoremachines.CMMMTierBridge";
+    private static volatile Method cmmmTierMethod;
+    private static boolean cmmmBridgeWarned;
 
     public static int getMachineTier(@Nullable BlockEntity machine) {
         if (machine == null) {
@@ -46,16 +61,65 @@ public class TierHelper {
             // 原版 Create 机器（或任何非 CMM 方块实体）视为 0 级。
             // 注意这里**不**处理 CMM 的锯：CMM 2.7 没有发布任何锯方块
             // （只有未启用的 API 类），因此不存在需要识别的锯机器。
-            return 0;
+            // CMMM 的分级破碎轮/锯是可选依赖，经 {@link #externalMachineTier} 识别。
+            return externalMachineTier(machine);
         }
         return toFormulaTier(cmmTier);
     }
 
-    private static int toFormulaTier(int cmmTier) {
+    /**
+     * 识别可选依赖 CreateMoreMoreMachines 的机器（分级破碎轮/锯）并换算等级。
+     *
+     * <p>为什么不直接 instanceof：本类在主 mixin 配置（不门控）里被引用，
+     * 任何对 CMMM 类型的直接引用都会在未安装该模组时抛 NoClassDefFoundError。
+     * 因此先用「类名前缀 + 反射」判断 —— 前缀不匹配（= 模组未安装或原版机器）时
+     * 只花一次字符串比较，绝不触碰 CMMM 的类；命中后才加载
+     * {@code CMMMTierBridge}（该类只在前缀命中时才会被加载，内部才能安全地
+     * 直接引用 CMMM 类型）。
+     */
+    private static int externalMachineTier(BlockEntity machine) {
+        if (!machine.getClass().getName().startsWith(CMMM_PACKAGE)) {
+            return 0;
+        }
+        try {
+            Method bridge = cmmmTierMethod;
+            if (bridge == null) {
+                bridge = Class.forName(CMMM_BRIDGE, true, TierHelper.class.getClassLoader())
+                        .getMethod("getMachineTier", BlockEntity.class);
+                cmmmTierMethod = bridge;
+            }
+            return (Integer) bridge.invoke(null, machine);
+        } catch (Throwable t) {
+            // 桥接失败按「原版机器」处理（拒绝带门槛的配方），只警告一次避免刷屏。
+            if (!cmmmBridgeWarned) {
+                cmmmBridgeWarned = true;
+                More_formula.LOGGER.warn("more_formula: failed to resolve CreateMoreMoreMachines tier for {}, treating as tier 0",
+                        machine.getClass().getName(), t);
+            }
+            return 0;
+        }
+    }
+
+    /** CMM/CMMM 等级值 → 本模组等级值。等级语义见类注释，纯函数便于离线回归。 */
+    public static int toFormulaTier(int cmmTier) {
         if (cmmTier <= 1) {
             return cmmTier;
         }
         return cmmTier - CMM_TIER_OFFSET;
+    }
+
+    /**
+     * 核心门槛判定（纯函数）：{@code required <= 0} 之外，
+     * 创造级（-1）机器通行一切，其余机器要求 {@code tier >= required}。
+     */
+    public static boolean isTierAllowed(int machineTier, int requiredTier) {
+        if (requiredTier == -1) {
+            return machineTier == -1;
+        }
+        if (requiredTier <= 0) {
+            return true;
+        }
+        return machineTier == -1 || machineTier >= requiredTier;
     }
 
     public static boolean isAllowed(@Nullable BlockEntity machine, ResourceLocation recipeId) {
@@ -81,16 +145,6 @@ public class TierHelper {
         int required = getRequiredFillingTier(level, stack, availableFluid);
         int tier = getMachineTier(machine);
         return isTierAllowed(tier, required);
-    }
-
-    private static boolean isTierAllowed(int machineTier, int requiredTier) {
-        if (requiredTier == -1) {
-            return machineTier == -1;
-        }
-        if (requiredTier <= 0) {
-            return true;
-        }
-        return machineTier == -1 || machineTier >= requiredTier;
     }
 
     /**

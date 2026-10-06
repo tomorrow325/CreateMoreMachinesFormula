@@ -8,8 +8,10 @@ package org.minecart.more_formula;
 // 双 map 合并后的优先级（D）。
 
 import net.minecraft.resources.ResourceLocation;
+import org.minecart.more_formula.compat.createmoremoremachines.CMMMTierBridge;
 import org.minecart.more_formula.compat.mekanicalcreate.MekanicalCreateRecipeGate;
 import org.minecart.more_formula.compat.mekanicalcreate.MekanicalCreateSpeedConfig;
+import org.minecart.more_formula.util.TierHelper;
 
 import java.util.List;
 import java.util.function.BooleanSupplier;
@@ -215,6 +217,30 @@ public final class ConfigTest {
         check("spout Creative 默认 4 倍", () -> MekanicalCreateSpeedConfig.defaultMultiplier(-1) == 4);
         check("多个催化剂使用最高倍率而非相乘", () -> MekanicalCreateSpeedConfig.getHighestMultiplier(
                 List.of(2, 3, 1)) == 3);
+
+        // ---- CreateMoreMoreMachines（可选）：CMM 等级值 → 本模组等级值的平移 ----
+        // CMMM 复用 CMM 的 CMMTier（brass=2/netherite=3/end=4/beyond=5/creative=-1），
+        // 与 CMM 机器共用同一映射，不能因接入新机器而漂移。
+        check("CMM brass 等级平移为 1 级", () -> TierHelper.toFormulaTier(2) == 1);
+        check("CMM netherite 等级平移为 2 级", () -> TierHelper.toFormulaTier(3) == 2);
+        check("CMM end 等级平移为 3 级", () -> TierHelper.toFormulaTier(4) == 3);
+        check("CMM beyond 等级平移为 4 级", () -> TierHelper.toFormulaTier(5) == 4);
+        check("CMM creative 等级保持创造级", () -> TierHelper.toFormulaTier(-1) == Config.CREATIVE_TIER);
+        check("CMM 等级 1 原样保留", () -> TierHelper.toFormulaTier(1) == 1);
+        check("CMM 等级 0 原样保留", () -> TierHelper.toFormulaTier(0) == 0);
+
+        // ---- 门槛判定的纯函数语义（0 级机器拒绝一切门槛配方） ----
+        check("0 级机器拒绝普通门槛", () -> !TierHelper.isTierAllowed(0, 2));
+        check("同级机器放行", () -> TierHelper.isTierAllowed(2, 2));
+        check("高级机器放行低门槛", () -> TierHelper.isTierAllowed(3, 2));
+        check("创造级机器放行普通门槛", () -> TierHelper.isTierAllowed(Config.CREATIVE_TIER, 2));
+        check("0 级机器拒绝创造级门槛", () -> !TierHelper.isTierAllowed(0, Config.CREATIVE_TIER));
+        check("创造级门槛只放行创造级机器", () -> TierHelper.isTierAllowed(Config.CREATIVE_TIER, Config.CREATIVE_TIER)
+                && !TierHelper.isTierAllowed(4, Config.CREATIVE_TIER));
+        check("无门槛配方对所有机器放行", () -> TierHelper.isTierAllowed(0, 0));
+
+        // ---- 反射桥接类在未连接运行时也应安全加载并对 null 返回 0 级 ----
+        check("CMMM 桥接对 null 机器返回 0 级", () -> CMMMTierBridge.getMachineTier(null) == 0);
 
         System.out.println();
         System.out.println("PASSED=" + passed + " FAILED=" + failed);

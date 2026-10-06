@@ -41,6 +41,10 @@ const RUNTIME_EXTRA = [
   ['io.netty', 'netty-resolver', '4.1.97.Final'],
   ['io.netty', 'netty-transport', '4.1.97.Final'],
   ['io.netty', 'netty-transport-native-unix-common', '4.1.97.Final'],
+  // Config / MekanicalCreateSpeedConfig 的 TOML 读取走 night-config；
+  // 新增的测试一加载它们就需要这两个模块，否则 NoClassDefFoundError。
+  ['com.electronwill.night-config', 'core', '3.8.3'],
+  ['com.electronwill.night-config', 'toml', '3.8.3'],
 ];
 
 function cached(group, artifact, version) {
@@ -50,7 +54,7 @@ function cached(group, artifact, version) {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
       const p = path.join(d, e.name);
       if (e.isDirectory()) walk(p);
-      else if (e.name.endsWith('.jar') && !e.name.endsWith('-sources.jar')) found.push(p);
+      else if (e.name.endsWith('.jar') && !e.name.endsWith('-sources.jar') && !e.name.endsWith('-javadoc.jar')) found.push(p);
     }
   })(dir);
   if (!found.length) throw new Error('missing ' + group + ':' + artifact + ':' + version);
