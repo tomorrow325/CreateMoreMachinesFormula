@@ -4,6 +4,7 @@ build/
 
 # Minecraft development runtime
 run/
+run-noopt/
 
 # IDE metadata
 .idea/

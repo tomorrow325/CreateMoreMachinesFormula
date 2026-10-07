@@ -98,7 +98,7 @@
 |------|----------|
 | Minecraft | 1.21.1 |
 | NeoForge | 21.x |
-| Create | 6.0.0 或更高版本 |
+| Create | 6.0.10 或更高版本 |
 | Create: More Machines | 2.7 或更高版本 |
 | KubeJS | 2101.7.2-build.285 或更高版本 |
 | KubeJS-Create | 2101.3.1-build.18 或更高版本 |

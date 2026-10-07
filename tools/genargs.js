@@ -148,15 +148,89 @@ const CP = [
   cached('org.joml', 'joml', '1.10.5'),
 ];
 
-// 工程自带的 jar：libs/ 是**进仓库**的编译期依赖（Create / CMM / KubeJS-Create /
-// KubeJS / rhino / JEI），build/deps/ 是从 Create 的 jarJar 里解出来的
-// （ponder / flywheel / Registrate，不进仓库，由 tools/fetch-deps.js 就地生成）。
+// Maven 坐标的编译期依赖：Create / ponder / Registrate / flywheel API / JEI API /
+// KubeJS / KubeJS-Create。以前它们随仓库放在 libs/（Create、KubeJS-Create 等），
+// 或从 Create 的 jarJar 里就地解出（ponder / flywheel / Registrate）；现在全部走
+// Gradle 坐标（见 build.gradle），手工链也从 modules-2 缓存取 —— 前提仍是这台机器
+// 做过一次联网的 Gradle 构建（和 merged MC 包同一个前提）。
 //
-// 两个目录都按通配纳入，而不是写死文件名 —— 因为 KubeJS / JEI 的可用版本可能因机器而异
-// （build.gradle 声明一套、整合包可能装了更新的一套），只要目录里有对应构件就能编译。
+// 版本号不在这里写死：从 gradle.properties 与 build.gradle 解析，避免两边漂移。
+function readProps(file) {
+  const out = {};
+  for (const line of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
+    const m = line.match(/^\s*([-\w.]+)\s*=\s*(\S+)\s*$/);
+    if (m) out[m[1]] = m[2];
+  }
+  return out;
+}
+const props = readProps(path.join(ROOT, 'gradle.properties'));
+const buildGradleSrc = fs.readFileSync(path.join(ROOT, 'build.gradle'), 'utf8');
+
+function coordinate(re, what) {
+  const m = buildGradleSrc.match(re);
+  if (!m) throw new Error('build.gradle 里找不到 ' + what + ' 的坐标');
+  return m[1];
+}
+
+// rhino 是 kubejs 的 POM 传递依赖（版本随 kubejs 变化，且缓存里常同时留着新旧两版，
+// 绝不能按目录名挑最高版）—— 优先从缓存里 kubejs 的 .pom 读出它钉死的 rhino 版本。
+// 缓存里没有对应 POM 时（files-2.1 只留了 jar），回退到缓存里最新的 rhino：
+// 这里只影响**编译期**（手工链不跑游戏），rhino 暴露给编译器的 API 在各版本间一致。
+function rhinoForKubejs() {
+  const dir = path.join(MODULE_CACHE, 'dev.latvian.mods', 'kubejs-neoforge', props.kubejs_version);
+  let pom = null;
+  if (fs.existsSync(dir)) {
+    pom = (function walk(d) {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const p = path.join(d, e.name);
+        if (e.isDirectory()) {
+          const hit = walk(p);
+          if (hit) return hit;
+        } else if (e.name.endsWith('.pom')) {
+          return p;
+        }
+      }
+      return null;
+    })(dir);
+  }
+  if (pom) {
+    const m = fs.readFileSync(pom, 'utf8')
+      .match(/<artifactId>rhino<\/artifactId>\s*<version>([^<]+)<\/version>/);
+    if (m) return m[1];
+  }
+  const rhinoRoot = path.join(MODULE_CACHE, 'dev.latvian.mods', 'rhino');
+  const versions = fs.existsSync(rhinoRoot) ? fs.readdirSync(rhinoRoot) : [];
+  if (!versions.length) throw new Error('缓存里找不到 kubejs 的 POM，也没有任何 rhino 构件: ' + dir);
+  const newest = versions.sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).pop();
+  console.warn('[genargs] 警告: 缓存里没有 kubejs 的 POM，rhino 按缓存最高版编译: ' + newest
+    + '（仅影响手工链编译，不影响 Gradle 运行时）');
+  return newest;
+}
+
+const MAVEN_COMPILE_DEPS = [
+  ['com.simibubi.create', 'create-1.21.1',
+    coordinate(/com\.simibubi\.create:create-1\.21\.1:([\w.+-]+)/, 'Create')],
+  ['net.createmod.ponder', 'ponder-neoforge',
+    coordinate(/net\.createmod\.ponder:ponder-neoforge:([\w.+-]+)/, 'Ponder')],
+  ['com.tterrag.registrate', 'Registrate',
+    coordinate(/com\.tterrag\.registrate:Registrate:([\w.+-]+)/, 'Registrate')],
+  ['dev.engine-room.flywheel', 'flywheel-neoforge-api-' + props.minecraft_version,
+    coordinate(/flywheel-neoforge-api-\$\{minecraft_version\}:([\w.+-]+)/, 'Flywheel API')],
+  ['mezz.jei', 'jei-' + props.minecraft_version + '-common-api', props.jei_version],
+  ['mezz.jei', 'jei-' + props.minecraft_version + '-neoforge-api', props.jei_version],
+  ['dev.latvian.mods', 'kubejs-neoforge', props.kubejs_version],
+  ['dev.latvian.mods', 'rhino', rhinoForKubejs()],
+  ['dev.latvian.mods', 'kubejs-create-neoforge',
+    coordinate(/kubejs-create-neoforge:([\w.+-]+)/, 'KubeJS-Create')],
+];
+for (const [group, artifact, version] of MAVEN_COMPILE_DEPS) {
+  CP.push(cached(group, artifact, version));
+}
+
+// 工程自带的 jar：libs/ 只剩无 maven 渠道的 5 个（CMM / Create: Hand Made /
+// Mekanical-Create / Mekanism / CreateMoreMoreMachines），按通配纳入而不是写死文件名。
 const JAR_DIRS = [
-  { dir: path.join(ROOT, 'libs'), required: true, what: '工程自带的编译期依赖' },
-  { dir: path.join(ROOT, 'build', 'deps'), required: false, what: 'jarJar 解出的依赖（fetch-deps 生成）' },
+  { dir: path.join(ROOT, 'libs'), required: true, what: '无 maven 渠道的工程自带依赖' },
 ];
 
 for (const { dir, required, what } of JAR_DIRS) {

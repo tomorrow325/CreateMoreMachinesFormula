@@ -1,11 +1,9 @@
 // 准备 build/deps/：从 Create 的 jar 里解出 jarJar 打包的编译期依赖。
 //
-// 背景：Create 把 ponder / flywheel / Registrate 以 jarJar 形式内嵌在自己的 jar 里
-// （META-INF/jarjar/*.jar）。编译本模组需要它们，但没必要把同一批 jar 再往仓库里存一份，
-// 所以每次构建时就地解出来 —— 完全离线，不需要联网。
-//
-// 其余编译期依赖（KubeJS / rhino / JEI）已经直接放在仓库的 libs/ 里，
-// 由 tools/genargs.js 一并纳入类路径，不经过本脚本。
+// 【已过时但保留兼容】编译期依赖换成 Gradle maven 坐标后（Create 6.0.9+ 本体也走坐标），
+// ponder / flywheel / Registrate 由 tools/genargs.js 直接从 modules-2 缓存取，
+// 不再需要本脚本解包。libs/ 里已没有 create 的 jar —— 脚本检测到这一点就直接跳过；
+// 若 libs/ 里仍有 create jar（旧检出），行为保持原样。
 //
 // 用法：
 //   node tools/fetch-deps.js           # 缺什么补什么
@@ -22,14 +20,12 @@ const FORCE = process.argv.includes('--force');
 
 fs.mkdirSync(DEPS, { recursive: true });
 
-/** 找一个 create 主 jar（形如 create-1.21.1-6.0.10.jar）。 */
+/** 找一个 create 主 jar（旧检出里形如 create-1.21.1-6.0.10.jar）；没有则返回 null（坐标时代属正常）。 */
 function findCreateJar() {
-  const hits = fs.readdirSync(LIBS).filter((f) => /^create[-.].*\.jar$/i.test(f));
+  const hits = fs.readdirSync(LIBS).filter((f) => /^create[-.].*\.jar$/i.test(f) && !f.startsWith('create_hand_made'));
   if (!hits.length) {
-    throw new Error(
-      'libs/ 下找不到 create 的 jar。\n' +
-      '  libs/ 里的编译期依赖是随仓库一起分发的，缺了说明仓库不完整。'
-    );
+    console.log('libs/ 下没有 create 的 jar（编译期依赖已走 Gradle 坐标），跳过解包。');
+    return null;
   }
   return path.join(LIBS, hits[0]);
 }
@@ -68,6 +64,7 @@ function readEntry(src, entry) {
 
 function main() {
   const src = findCreateJar();
+  if (!src) return;
   const entries = listJarJar(src);
   if (!entries.length) {
     throw new Error('create jar 里没有 META-INF/jarjar/ 条目：' + path.basename(src));

@@ -61,11 +61,6 @@ public final class MekanicalCreateRecipeGate {
         return ModuleKind.NONE;
     }
 
-    public static ModuleKind getModuleKind(ItemStack module) {
-        return module.isEmpty() ? ModuleKind.NONE
-                : getModuleKind(BuiltInRegistries.ITEM.getKey(module.getItem()));
-    }
-
     public static boolean isSupportedModule(ItemStack module, boolean allowFluidProcessing) {
         return !module.isEmpty() && isSupportedModule(
                 BuiltInRegistries.ITEM.getKey(module.getItem()), allowFluidProcessing);
