@@ -146,6 +146,12 @@ const CP = [
   cached('org.apache.logging.log4j', 'log4j-slf4j2-impl', '2.22.1'),
   cached('org.jetbrains', 'annotations', '24.1.0'),
   cached('org.joml', 'joml', '1.10.5'),
+  // netty-buffer 是**编译期**就需要的：Minecraft 的 FriendlyByteBuf
+  // extends io.netty.buffer.ByteBuf（已用 javap 确认），所以任何用到
+  // 网络缓冲区类型的代码（例如 Data Attachment 的 sync 序列化）在编译时
+  // 必须有 netty 在类路径上。Gradle 从 MC 依赖传递拿到它，手工链必须显式列。
+  cached('io.netty', 'netty-buffer', '4.1.97.Final'),
+  cached('io.netty', 'netty-common', '4.1.97.Final'),
 ];
 
 // Maven 坐标的编译期依赖：Create / ponder / Registrate / flywheel API / JEI API /
@@ -263,6 +269,11 @@ fs.mkdirSync(out, { recursive: true });
 
 const args = [
   '-encoding', 'UTF-8',
+  // -g 必须显式给：Gradle 的 JavaCompile 默认带全套调试信息（-g = 源码/行号/局部变量），
+  // 而裸 javac 的默认是「源码 + 行号，不含局部变量表」。少了它，产物里没有
+  // LocalVariableTable，玩家提交的崩溃日志里局部变量名会丢、断点调试也对不上。
+  // 这是手工链与 Gradle 构建之间一个不显眼但真实的差异（jar 会小 ~6%）。
+  '-g',
   '-proc:none',
   '-Xmaxerrs', '2000',
   '-Xmaxwarns', '200',

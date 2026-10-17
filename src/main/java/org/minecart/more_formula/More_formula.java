@@ -22,6 +22,8 @@ public class More_formula {
 
     public More_formula(IEventBus modEventBus, ModContainer modContainer) {
         ITEMS.register(modEventBus);
+        // 「运行等级」附件的注册（提供 NBT 持久化与客户端同步）。
+        MachinePriority.register(modEventBus);
         modContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER,
                 MekanicalCreateSpeedConfig.SPEC);
     }

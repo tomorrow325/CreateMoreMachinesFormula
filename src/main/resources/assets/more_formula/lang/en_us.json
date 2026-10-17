@@ -2,8 +2,13 @@
   "item.more_formula.incomplete_test_package": "Incomplete Test Package",
   "more_formula.jei.tiered_title": "%s-Tier %s",
   "more_formula.tier.-1": "Creative",
+  "more_formula.tier.0": "None",
   "more_formula.tier.1": "Brass",
   "more_formula.tier.2": "Netherite",
   "more_formula.tier.3": "End",
-  "more_formula.tier.4": "Beyond"
+  "more_formula.tier.4": "Beyond",
+
+  "more_formula.running_tier.adjusted": "Recipe priority set to: %s",
+  "more_formula.goggle.machine_tier": "Machine tier: %s",
+  "more_formula.goggle.running_tier": "Running tier: %s"
 }
