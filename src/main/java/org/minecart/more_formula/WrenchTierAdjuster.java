@@ -123,8 +123,10 @@ public final class WrenchTierAdjuster {
     /**
      * 把「玩家点的方块」解析成「应该写数据的方块实体」。
      *
-     * <p>破碎轮：点轮子 → 找配对控制器；找不到控制器（例如只有半个结构）时
-     * 回退到轮子本身，避免玩家按了毫无反应。
+     * <p>破碎轮：点轮子 → 找配对控制器。找不到控制器（例如只有半个结构）时
+     * 回退到轮子本身 —— 但轮子不在可调名单里，随后会被 {@code isSupported} 拒绝，
+     * 玩家按了没有反馈：半结构本身没有处理能力，这是预期行为（回退只为不在此处
+     * 特判 null，统一交给名单判定）。
      */
     private static BlockEntity resolveTarget(Level level, BlockEntity clicked, net.minecraft.core.BlockPos pos) {
         if (!CrushingWheelPair.isWheel(clicked)) {

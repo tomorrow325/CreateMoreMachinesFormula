@@ -133,6 +133,27 @@ public class Config {
         }
     }
 
+    /**
+     * 删除前缀条目（跨所有来源）。归一化规则与 {@link #addPrefixTier} 相同
+     * （去尾部 {@code *}、空串忽略），因此「带 {@code *} 注册、不带 {@code *} 移除」
+     * 或反过来都能命中；未命中为无害空操作。
+     */
+    public static void removePrefixTier(String prefix) {
+        if (prefix == null) {
+            return;
+        }
+        if (prefix.endsWith("*")) {
+            prefix = prefix.substring(0, prefix.length() - 1);
+        }
+        if (prefix.isEmpty()) {
+            return;
+        }
+        final String normalized = prefix;
+        for (Source source : Source.values()) {
+            PREFIX.get(source).removeIf(existing -> existing.prefix().equals(normalized));
+        }
+    }
+
     /** 删除某来源的全部条目（含前缀）。 */
     public static void clear(Source source) {
         EXACT.get(source).clear();

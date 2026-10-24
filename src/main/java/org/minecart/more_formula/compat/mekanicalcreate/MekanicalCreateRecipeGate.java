@@ -10,11 +10,14 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class MekanicalCreateRecipeGate {
     private static final String CMM_NAMESPACE = "createmoremachines";
     private static final String CANDIDATE_SUFFIX = "/mekanicalcreate_";
-    private static volatile Method candidateIdAccessor;
+    /** 按候选类分桶缓存 id() 访问器：单一 Method 按「首个类」定型后，异类候选 invoke 会抛未捕获的 IllegalArgumentException。 */
+    private static final Map<Class<?>, Method> CANDIDATE_ID_ACCESSORS = new ConcurrentHashMap<>();
 
     public enum ModuleKind {
         NONE,
@@ -223,14 +226,17 @@ public final class MekanicalCreateRecipeGate {
 
     private static ResourceLocation getCandidateId(Object candidate) {
         try {
-            Method accessor = candidateIdAccessor;
-            if (accessor == null) {
-                accessor = candidate.getClass().getDeclaredMethod("id");
-                accessor.setAccessible(true);
-                candidateIdAccessor = accessor;
-            }
+            Method accessor = CANDIDATE_ID_ACCESSORS.computeIfAbsent(candidate.getClass(), cls -> {
+                try {
+                    Method method = cls.getDeclaredMethod("id");
+                    method.setAccessible(true);
+                    return method;
+                } catch (NoSuchMethodException exception) {
+                    throw new IllegalStateException("Unable to read Mekanical-Create candidate id", exception);
+                }
+            });
             return (ResourceLocation) accessor.invoke(candidate);
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException exception) {
+        } catch (IllegalAccessException | InvocationTargetException exception) {
             throw new IllegalStateException("Unable to read Mekanical-Create candidate id", exception);
         }
     }

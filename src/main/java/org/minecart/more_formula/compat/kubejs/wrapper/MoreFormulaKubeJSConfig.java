@@ -23,7 +23,12 @@ public class MoreFormulaKubeJSConfig {
     }
 
     public static void removeTier(String recipeId) {
-        Config.removeTier(ResourceLocation.parse(recipeId));
+        // 与 setTier 对称：* 结尾走前缀移除，绝不能把 * 喂给 parse（会抛异常）。
+        if (recipeId.endsWith("*")) {
+            Config.removePrefixTier(recipeId);
+        } else {
+            Config.removeTier(ResourceLocation.parse(recipeId));
+        }
     }
 
     public static int getTier(String recipeId) {

@@ -10,6 +10,7 @@ package org.minecart.more_formula;
 import net.minecraft.resources.ResourceLocation;
 import org.minecart.more_formula.compat.handmade.HandMadeRecipeGate;
 import org.minecart.more_formula.compat.handmade.MoreFormulaHandMadeMixinConfigPlugin;
+import org.minecart.more_formula.compat.kubejs.wrapper.MoreFormulaKubeJSConfig;
 import org.minecart.more_formula.compat.mekanicalcreate.MekanicalCreateRecipeGate;
 import org.minecart.more_formula.compat.mekanicalcreate.MekanicalCreateSpeedConfig;
 import org.minecart.more_formula.compat.mekanicalcreate.MoreFormulaMekanicalCreateMixinConfigPlugin;
@@ -118,6 +119,23 @@ public final class ConfigTest {
         Config.clearAll();
         Config.addPrefixTier("create:mixing/*", 2, SERVER);
         check("带 * 的前缀当成通配", () -> Config.getRequiredTier(rl("create:mixing/abc")) == 2);
+
+        // ---- removeTier 的前缀通配（与 setTier 对称；此前 * 直传 parse 会抛异常）----
+        Config.clearAll();
+        Config.addPrefixTier("create:mixing/", 2, SERVER);
+        Config.addPrefixTier("create:filling/*", 3, STARTUP);
+        Config.addTier(rl("create:pressing/keep"), 1, STARTUP);
+        MoreFormulaKubeJSConfig.removeTier("create:mixing/*");
+        check("通配移除 SERVER 前缀条目", () -> Config.getRequiredTier(rl("create:mixing/x")) == 0);
+        MoreFormulaKubeJSConfig.removeTier("create:filling/*");
+        check("通配移除 STARTUP 前缀条目（带 * 注册同样命中）", () -> Config.getRequiredTier(rl("create:filling/x")) == 0);
+        check("通配移除不伤及精确条目", () -> Config.getRequiredTier(rl("create:pressing/keep")) == 1);
+        MoreFormulaKubeJSConfig.removeTier("somemod:never_registered/*");
+        check("移除未登记前缀为空操作不抛异常", () -> Config.getKnownTiers().equals(List.of(1)));
+        Config.clearAll();
+        Config.addTier(rl("create:mixing/a"), 2, SERVER);
+        MoreFormulaKubeJSConfig.removeTier("create:mixing/a");
+        check("精确移除路径不回归", () -> Config.getRequiredTier(rl("create:mixing/a")) == 0);
 
         // ---- 空/异常输入不炸 ----
         Config.clearAll();

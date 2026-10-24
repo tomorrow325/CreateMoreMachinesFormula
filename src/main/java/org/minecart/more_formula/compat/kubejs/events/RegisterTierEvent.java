@@ -25,7 +25,12 @@ public class RegisterTierEvent implements KubeEvent {
     }
 
     public void removeTier(String recipeId) {
-        removeTier(ResourceLocation.parse(recipeId));
+        // 与 MoreFormula.removeTier 同一套通配语义：* 结尾删前缀条目，否则删精确条目。
+        if (recipeId.endsWith("*")) {
+            Config.removePrefixTier(recipeId);
+        } else {
+            removeTier(ResourceLocation.parse(recipeId));
+        }
     }
 
     public void removeTier(ResourceLocation recipeId) {

@@ -1,7 +1,7 @@
 # more_formula KubeJS 编写指南
 
 > 适用版本：**more_formula 0.0.2+**
-> 前置依赖（全部必需）：Minecraft 1.21.1 · NeoForge 21.x · Create 6.x · Create: More Machines 2.7+ · KubeJS 2101.7.2+ · KubeJS-Create 2101.3.1+
+> 前置依赖（全部必需）：Minecraft 1.21.1 · NeoForge 21.x · Create 6.x · Create: More Machines 3.0+ · KubeJS 2101.7.2+ · KubeJS-Create 2101.3.1+
 >
 > 本文是本模组 KubeJS 用法的**权威参考**。与旧的《KubeJS使用说明.md》冲突时以本文为准。
 
@@ -215,14 +215,16 @@ MoreFormulaEvents.registerTier(event => {
 | `create:item_application` | `event.recipes.create.item_application(...)` | 高级部署器 | 部署器配方搜索事件 |
 | `create:sequenced_assembly` | `event.recipes.create.sequenced_assembly(...)` | 取决于各工序用到的机器 | 见 [第 7 节](#7-装配线专题重点) |
 
-### ⚠️ 粉碎轮 / 石磨 / 锯切：需要可选依赖 CMMM
+### ✅ 粉碎轮 / 石磨 / 锯切：随 CMM 3.0 常驻可用
 
 `create:crushing`（粉碎轮）、`create:milling`（石磨／碾磨）、`create:cutting`（锯切）
-在安装可选依赖 **CreateMoreMoreMachines（CMMM）** 后即有对应分级机器
-（五档分级破碎轮、分级机械锯；CMMM 没有分级磨石，milling 同样由分级破碎轮控制器执行），
-可以正常设门槛。**未安装 CMMM 时给这些设门槛 → 配方永远无法完成**，不要设。
+随必需依赖 Create: More Machines（CMM）1.21.1-3.0 起**常驻可设门槛**——分级破碎轮与
+分级机械锯自 CMM 3.0 起是 CMM 本体机器（黄铜/下界合金/末影/超越/创造五档）。
+CMM 3.0 没有分级磨石，milling 同样由分级破碎轮控制器执行。
 
-> 关于锯切：CMM 2.7 本体**完全没有发布任何高级锯** —— 它在自己的 tier 插件里对 `SAW` 直接调用了 `withoutAll()`（已用字节码确认），jar 内也没有任何 saw 的模型/贴图。可选依赖 CMMM 补上了五档分级锯与分级破碎轮；只装 CMM 2.7 时这三类仍然没有高级版。
+> 本模组的最低 CMM 依赖就是 3.0，装好即有上述分级机器；旧「CMM 2.7 + 可选
+> CreateMoreMoreMachines（CMMM）」组合自本模组 0.2.x 起不再受支持（CMMM 已并入
+> CMM 上游，独立版停发）。
 
 ### ❌ 不要设门槛（任何环境都没有对应高级机器）
 
@@ -402,7 +404,7 @@ console.info('[门槛自检] 当前用到过的全部等级 = ' + MoreFormula.ge
 
 | 症状 | 原因 | 处理 |
 |---|---|---|
-| 配方永远做不出来 | 未装 CMMM 时给 crushing/milling/cutting 设了门槛，或给 splashing/emptying 设了门槛 | 删掉该门槛，或安装 CMMM |
+| 配方永远做不出来 | 给 splashing/emptying 设了门槛（任何环境都没有对应高级机器） | 删掉 splashing/emptying 的门槛 |
 | 配方永远做不出来 | 门槛设太高，你手上没有对应等级的机器 | 降门槛，或造高级机器 |
 | JEI 里找不到这条配方 | 门槛命中的配方会从原版分类移出、进分级分类 | 在 JEI 里找「黄铜级xx」这类**分级分类**标签 |
 | 装配线跑到别的线去了 | 起始输入物和已有装配线撞车 | 换一个冷门输入物（见 7.3） |
@@ -450,7 +452,7 @@ D:\.minecraft\versions\new project\kubejs\server_scripts\more_formula_assembly_t
 MoreFormula.setTier('create:mixing/xx', Tier.BRASS)     // 按精确 ID
 MoreFormula.setPrefixTier('create:mixing/', Tier.BRASS) // 按前缀
 MoreFormula.getTier('create:mixing/xx')                 // 查询 → 整数
-MoreFormula.removeTier('create:mixing/xx')              // 删除
+MoreFormula.removeTier('create:mixing/xx')              // 删除（精确 ID；传 'xx/*' 删前缀条目，与 setTier 对称）
 MoreFormula.getAllTiers()                               // 全部精确条目 Map
 MoreFormula.getKnownTiers()                             // 用到过的等级列表（升序）
 
@@ -458,7 +460,7 @@ MoreFormula.getKnownTiers()                             // 用到过的等级列
 MoreFormulaEvents.registerTier(event => {
     event.setTier(idOrWildcard, tier)
     event.getTier(id)
-    event.removeTier(id)
+    event.removeTier(idOrWildcard)
     event.getAllTiers()
 })
 
