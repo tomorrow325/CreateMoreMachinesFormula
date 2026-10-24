@@ -15,9 +15,9 @@ import java.util.Set;
  * 现在两边都问这里，名单只有一份。
  *
  * <h2>为什么用类名字符串而不是 {@code instanceof}</h2>
- * CMMM 是<b>可选依赖</b>。本类在主 mixin 配置（不门控）里被引用，任何对 CMMM 类型的
- * 直接引用都会在未安装该模组时抛 {@code NoClassDefFoundError}。类名字符串比较
- * 在模组缺席时只是「永远不命中」，绝对安全（与 {@link TierHelper} 的桥接同一套约束）。
+ * 名单要与 {@link TierHelper} 的识别保持同一套判定面，且字符串判定可离线断言
+ * （{@code ConfigTest} 直接核对名单内容本身）。CMM 是必需依赖，
+ * 这里不涉及「可选依赖缺席时的类加载安全」问题。
  *
  * <h2>入册条件（两条都要满足）</h2>
  * <ol>
@@ -28,7 +28,7 @@ import java.util.Set;
  *
  * <h2>刻意未入册的机器</h2>
  * <ul>
- *   <li><b>CMMM 鼓风机（{@code encased_fan}，1.1 新增）</b>：它的配方是 Create 的
+ *   <li><b>CMM 3.0 分级鼓风机（{@code encased_fan}）</b>：它的配方是 Create 的
  *       <i>鼓风处理</i>（{@code splashing} / {@code haunting} / {@code blasting} /
  *       {@code smoking}），而本模组<b>从未</b>给这些配方装过闸门 ——
  *       {@code TierHelper} 只处理 pressing / mixing / compacting / filling /
@@ -36,7 +36,7 @@ import java.util.Set;
  *       原因在 API 形状：{@code FanProcessingType.canProcess(ItemStack, Level)}
  *       只拿得到「物品 + 世界」，<b>拿不到是哪台鼓风机</b>，因此无法按机器等级判定；
  *       唯一的收口点是 {@code AirCurrent.tickAffectedHandlers}（那里同时知道风扇与
- *       处理类型），而那属于「给鼓风处理加门槛」这个独立功能，不是本轮的范围。
+ *       处理类型），而那属于「给鼓风处理加门槛」这个独立功能，不在本轮范围。
  *       在没有闸门之前把它登记进来，只会让扳手显示「已调整为黄铜」却什么都不改变 ——
  *       宁可暂时不给这个控制，也不给一个假的。鼓风机本身照常工作，等级显示也照旧。</li>
  *   <li>不跑分级配方的 CMM 方块：工作盆、置物台（depot）、流体罐、蒸汽引擎。</li>
@@ -44,7 +44,7 @@ import java.util.Set;
  */
 public final class MachineRoster {
 
-    // ---- CMM（Create: More Machines）----
+    // ---- CMM（Create: More Machines 1.21.1-3.0，CMMM 已并入本体）----
     private static final String CMM_PRESS =
             "net.yxiao233.createmoremachines.api.content.mechanical.press.CMMMechanicalPressBlockEntity";
     private static final String CMM_MIXER =
@@ -53,24 +53,19 @@ public final class MachineRoster {
             "net.yxiao233.createmoremachines.api.content.mechanical.deployer.CMMDeployerBlockEntity";
     private static final String CMM_SPOUT =
             "net.yxiao233.createmoremachines.api.content.spout.CMMSpoutBlockEntity";
-    private static final String CMM_SAW =
-            "net.yxiao233.createmoremachines.api.content.saw.CMMSawBlockEntity";
-
-    // ---- CMMM（Create: More More Machines，可选依赖）----
+    private static final String CMM_MECHANICAL_SAW =
+            "net.yxiao233.createmoremachines.api.content.mechanical.saw.CMMMechanicalSawBlockEntity";
     /** 破碎轮控制器：跑分级 crushing/milling 的那半（玩家点的是轮子，由 {@link CrushingWheelPair} 转过来）。 */
-    public static final String CMMM_CRUSHING_WHEEL_CONTROLLER =
-            "net.tomorrow325.createmoremoremachines.api.content.crushing_wheel.CMMCrushingWheelControllerBlockEntity";
-    private static final String CMMM_MECHANICAL_SAW =
-            "net.tomorrow325.createmoremoremachines.api.content.mechanical_saw.CMMMechanicalSawBlockEntity";
+    public static final String CMM_CRUSHING_WHEEL_CONTROLLER =
+            "net.yxiao233.createmoremachines.api.content.crushing_wheel.CMMCrushingWheelControllerBlockEntity";
 
     private static final Set<String> SUPPORTED = Set.of(
             CMM_PRESS,
             CMM_MIXER,
             CMM_DEPLOYER,
             CMM_SPOUT,
-            CMM_SAW,
-            CMMM_CRUSHING_WHEEL_CONTROLLER,
-            CMMM_MECHANICAL_SAW);
+            CMM_MECHANICAL_SAW,
+            CMM_CRUSHING_WHEEL_CONTROLLER);
 
     private MachineRoster() {
     }
@@ -80,7 +75,7 @@ public final class MachineRoster {
         return be != null && isSupported(be.getClass().getName());
     }
 
-    /** 纯字符串判定（离线可断言，且不会触碰任何可选依赖的类）。 */
+    /** 纯字符串判定（离线可断言）。 */
     public static boolean isSupported(@Nullable String className) {
         return className != null && SUPPORTED.contains(className);
     }

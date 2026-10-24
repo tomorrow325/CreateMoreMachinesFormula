@@ -6,7 +6,7 @@ import net.minecraft.world.level.block.state.BlockState;
 /**
  * Resolved tier machine visuals shared by the tiered sequenced-assembly sub categories.
  *
- * <p>{@code sawState} 为 CMMM（可选依赖）的分级锯状态，缺失（CMMM 不在场
+ * <p>{@code sawState} 为 CMM 3.0 的分级锯状态，缺失（该档未注册
  * 或该档未注册锯）时为 {@code null}，锯切工序回退原版渲染。
  */
 public record TieredMachineContext(BlockState pressBody, BlockState spoutBody,

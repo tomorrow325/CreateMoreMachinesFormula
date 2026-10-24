@@ -32,9 +32,8 @@ import java.util.List;
  * Create 按「无匹配配方」处理，物品在短倒计时后原样退回 —— 无损。
  *
  * <p>原版锯是 0 级机器：带门槛的 cutting/stonecutting 配方不允许执行。
- * CMMM 的分级锯继承自 {@code SawBlockEntity}，同一个 mixin 自动作用于它；
- * 等级识别走 {@link TierHelper#getMachineTier} 的反射桥接（CMMM 可选依赖，
- * 未安装时分级锯不存在，本 mixin 对原版锯的行为不变）。
+ * CMM 3.0 的分级锯继承自 {@code SawBlockEntity}，同一个 mixin 自动作用于它；
+ * 等级识别走 {@link TierHelper#getRealMachineTier} 的直接 instanceof。
  */
 @Mixin(SawBlockEntity.class)
 public abstract class SawBlockEntityMixin {

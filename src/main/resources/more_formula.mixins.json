@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "BasinOperatingBlockEntityMixin",
+    "CMMCrushingWheelControllerBlockEntityMixin",
     "CMMMechanicalPressBlockEntityMixin",
     "CMMSpoutBlockEntityMixin",
     "CMMSpoutGoggleMixin",

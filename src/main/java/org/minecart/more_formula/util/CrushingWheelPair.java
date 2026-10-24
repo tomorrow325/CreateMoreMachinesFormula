@@ -26,7 +26,7 @@ import org.minecart.more_formula.PriorityRules;
  * 而这条直线的方向与轮子的{@code AXIS}（旋转轴）<b>垂直</b>。
  *
  * <p>判据来自 Create 的 {@code CrushingWheelControllerBlock.lambda$updateSpeed$1}
- * 与 CMMM 的 {@code CMMCrushingWheelBlock.updateControllers}，两处都是同一条：
+ * 与 CMM 3.0 的 {@code CMMCrushingWheelBlock.updateControllers}，两处都是同一条：
  * <pre>
  * if (dir.getAxis() == state.getValue(AXIS)) return;   // 轴向的邻居不是控制器
  * BlockPos controllerPos = pos.relative(dir);          // 轮子 → 控制器：1 格
@@ -46,7 +46,7 @@ public final class CrushingWheelPair {
     /**
      * 找到给定轮子方块对应的控制器方块实体。
      *
-     * <p>先只认「轴向垂直」的邻居（Create / CMMM 的规范布局，见类注释）；
+     * <p>先只认「轴向垂直」的邻居（Create / CMM 3.0 的规范布局，见类注释）；
      * 万一那里没有，再把「沿轴」的邻居当兜底扫一遍 —— 这样即使将来布局变化、
      * 或结构被玩家改得只剩一半，也不会退化成「按了没反应」。
      *
@@ -67,7 +67,7 @@ public final class CrushingWheelPair {
                 continue;
             }
             if (axis == null || dir.getAxis() != axis) {
-                // 轴向垂直 = Create / CMMM 的规范位置，直接采用。
+                // 轴向垂直 = Create / CMM 3.0 的规范位置，直接采用。
                 return be;
             }
             // 沿轴的邻居：只在找不到规范位置时兜底，不覆盖已找到的规范位置。
@@ -81,13 +81,17 @@ public final class CrushingWheelPair {
     /**
      * 是否为「分级破碎轮」的控制器。
      *
-     * <p>只做类名判断，不直接引用 CMMM 的类型 —— 本类在未安装 CMMM 时也可能被加载，
-     * 直接引用会 NoClassDefFoundError（与 {@link TierHelper} 的桥接同一套约束）。
+     * <p>CMM 3.0 已把分级破碎轮并入本体，控制器类在 {@code net.yxiao233} 包下；
+     * 原版 Create 的控制器也在名单里 —— 扳手对它按不下去（0 级不可调），
+     * 但护目镜的「轮子 → 控制器」反查需要能认出它。
      */
     public static boolean isController(BlockEntity be) {
-        String n = be.getClass().getName();
-        // CMMM 分级控制器：走 CMMM 桥接拿等级；原版控制器：0 级。
-        return n.equals("net.tomorrow325.createmoremoremachines.api.content."
+        return isControllerByName(be.getClass().getName());
+    }
+
+    public static boolean isControllerByName(String n) {
+        // CMM 3.0 分级控制器；原版控制器：0 级。
+        return n.equals("net.yxiao233.createmoremachines.api.content."
                 + "crushing_wheel.CMMCrushingWheelControllerBlockEntity")
                 || n.equals("com.simibubi.create.content.kinetics.crusher."
                 + "CrushingWheelControllerBlockEntity");
@@ -95,8 +99,11 @@ public final class CrushingWheelPair {
 
     /** 是否为破碎轮的「轮子」（玩家可见/可点的那半）。 */
     public static boolean isWheel(BlockEntity be) {
-        String n = be.getClass().getName();
-        return n.equals("net.tomorrow325.createmoremoremachines.api.content."
+        return isWheelByName(be.getClass().getName());
+    }
+
+    public static boolean isWheelByName(String n) {
+        return n.equals("net.yxiao233.createmoremachines.api.content."
                 + "crushing_wheel.CMMCrushingWheelBlockEntity")
                 || n.equals("com.simibubi.create.content.kinetics.crusher."
                 + "CrushingWheelBlockEntity");
@@ -106,11 +113,13 @@ public final class CrushingWheelPair {
      * 该方块实体是否是「玩家可点、可调运行等级」的破碎轮轮子。
      */
     public static boolean isTieredWheel(BlockEntity be) {
-        if (!isWheel(be)) {
-            return false;
-        }
-        // 只有 CMMM 的分级轮子有等级；原版轮子是 0 级、不可调。
-        return be.getClass().getName().startsWith("net.tomorrow325.createmoremoremachines.");
+        return isTieredWheelByName(be.getClass().getName());
+    }
+
+    public static boolean isTieredWheelByName(String n) {
+        // 只有 CMM 3.0 的分级轮子有等级；原版轮子是 0 级、不可调。
+        return n.equals("net.yxiao233.createmoremachines."
+                + "api.content.crushing_wheel.CMMCrushingWheelBlockEntity");
     }
 
     /** 该方块实体的真实等级是否可调（分级机器且等级 &gt; 0 或创造级）。 */

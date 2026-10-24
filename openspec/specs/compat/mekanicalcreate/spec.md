@@ -6,18 +6,23 @@
 
 ## Requirements
 
-### Requirement: 分级模块的双命名空间识别
+### Requirement: 分级模块的命名空间识别
 
-兼容层 SHALL 把 `createmoremachines` 与 `createmoremoremachines` 两个命名空间下、名称以 `creative_`/`brass_`/`netherite_`/`end_`/`beyond_` 为前缀的机器物品（deployer、mechanical_press、mechanical_mixer、spout、crushing_wheel、mechanical_saw）识别为对应等级（-1/1/2/3/4）的模块；其他物品按 0 级、不参与加成映射。
+兼容层 SHALL 把 `createmoremachines` 命名空间下、名称以 `creative_`/`brass_`/`netherite_`/`end_`/`beyond_` 为前缀的机器物品（deployer、mechanical_press、mechanical_mixer、spout、crushing_wheel、mechanical_saw）识别为对应等级（-1/1/2/3/4）的模块；其他命名空间（含已退役的 `createmoremoremachines`）的物品按 0 级、不参与加成映射。
 
-#### Scenario: CMMM 分级模块同享加成
+#### Scenario: CMM 3.0 分级模块识别
 
-- **WHEN** 模块物品 ID 位于 `createmoremoremachines` 命名空间且带档位前缀
-- **THEN** 其被识别为对应等级的模块，与 CMM 本体模块同享速度/并行倍率
+- **WHEN** 模块物品 ID 位于 `createmoremachines` 命名空间且带档位前缀
+- **THEN** 其被识别为对应等级的模块，享受速度/并行倍率
+
+#### Scenario: 旧 CMMM 命名空间物品不再识别
+
+- **WHEN** 模块物品 ID 位于 `createmoremoremachines` 命名空间（独立 CMMM 时期的旧物品）
+- **THEN** 识别结果为 0 级（NONE），不参与任何加成映射
 
 #### Scenario: 无关物品不识别
 
-- **WHEN** 模块物品不属于上述两个命名空间或无档位前缀
+- **WHEN** 模块物品无档位前缀或属于其他命名空间
 - **THEN** 识别结果为 0 级（NONE），不参与任何加成映射
 
 ### Requirement: 模块按门槛过滤可执行配方

@@ -15,7 +15,7 @@ import java.util.List;
  * 给「继承 {@code KineticBlockEntity} 的那批受支持机器」的护目镜信息追加两行。
  *
  * <h2>为什么打在 {@code KineticBlockEntity} 上</h2>
- * CMM/CMMM 的机器方块实体本身<b>都不定义</b> {@code addToGoggleTooltip}（已逐个核对）：
+ * CMM 的机器方块实体本身<b>都不定义</b> {@code addToGoggleTooltip}（已逐个核对）：
  * 该方法由 Create 的 {@code KineticBlockEntity} 声明并实现，
  * 8 台机器里的 6 台直接继承它、{@code DeployerBlockEntity} 覆写（另有专门 mixin）、
  * 破碎轮的「轮子」也继承它。

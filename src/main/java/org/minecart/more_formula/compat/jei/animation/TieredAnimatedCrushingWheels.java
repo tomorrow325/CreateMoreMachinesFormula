@@ -14,7 +14,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
  *
  * <p>为什么仿 {@link TieredAnimatedPress} 模式而不复用原版动画：原版破碎轮/磨石是
  * 0 级机器、会被世界内 mixin 拦截门槛配方，再拿它们当分级分类的视觉就是误导。
- * CMMM 没有分级磨石方块，milling 配方实际由分级破碎轮控制器执行，
+ * CMM 3.0 没有分级磨石方块，milling 配方实际由分级破碎轮控制器执行，
  * 因此 milling 分类渲染单个分级破碎轮（{@code single=true}）。
  */
 public class TieredAnimatedCrushingWheels extends AnimatedKinetics {

@@ -21,11 +21,11 @@ gradlew.bat -PnoOptionalRuntime runClientNoOpt     # 无可选依赖客户端（
 - `src/main/java/org/minecart/more_formula/` — `Config.java`（门槛表，核心状态）、`DeployerRecipeGate.java`、`More_formula.java`（主类）
   - `mixin/` — 核心 Create/CMM mixin（对应 `more_formula.mixins.json`）
   - `compat/kubejs/` — KubeJS 脚本 API（`Tier` 常量、`MoreFormula` 绑定、事件）
-  - `compat/handmade/`、`compat/mekanicalcreate/`、`compat/createmoremoremachines/` — 三个可选 mod 的兼容，各有独立 `more_formula-*.mixins.json` + `*MixinConfigPlugin`
+  - `compat/handmade/`、`compat/mekanicalcreate/` — 两个可选 mod 的兼容，各有独立 `more_formula-*.mixins.json` + `*MixinConfigPlugin`（CMMM 兼容层已随 CMM 3.0 合并移除，分级破碎轮/锯是 CMM 原生机器，走核心 `mixin/`）
   - `compat/jei/` — 分级 JEI 分类与动画
 - `src/main/templates/META-INF/neoforge.mods.toml` — 带 `${}` 占位符的模板，版本号来自 `gradle.properties`（`generateModMetadata` 展开）
 - `src/test/java/.../ConfigTest.java` — main() 式离线回归（非 JUnit），只依赖 `ResourceLocation`，不需游戏运行时
-- `libs/` — 5 个无 maven 渠道、随仓库分发的 jar（CMM 2.7、Hand Made、Mekanical-Create、Mekanism、CMMM）
+- `libs/` — 4 个无 maven 渠道、随仓库分发的 jar（CMM 1.21.1-3.0、Hand Made、Mekanical-Create、Mekanism；CMM jar 需从 Y-Xiao233/CreateMoreMachines 源码构建）
 - `tools/*.js` — 手工构建/测试链；`docs/` — KubeJS 文档；`openspec/` — 规格驱动变更流程
 
 ## 架构与编辑规则
@@ -35,7 +35,7 @@ gradlew.bat -PnoOptionalRuntime runClientNoOpt     # 无可选依赖客户端（
 - 为某个可选 mod 新增 mixin 时：放进对应 `compat/<mod>/mixin/` 包，并登记到该 mod 自己的 `more_formula-*.mixins.json`，不要混入核心 `more_formula.mixins.json`。
 - 依赖版本下限是实测过的（Create 6.0.10 为有效下限、kubejs b.285 为有效下限），理由写在 `build.gradle` 注释里；不要随意升降版本。
 - 门槛表（`Config`）按来源分桶：服务器脚本条目在每次 `/reload` 前清空、启动脚本条目保留；优先级：精确 > 前缀，同类下服务器脚本 > 启动脚本，前缀取最长匹配。改 `Config` 逻辑必须同步补 `ConfigTest` 断言。
-- 未安装 CMMM 时不要给 crushing/milling/cutting 类型设门槛（无对应机器，配方会失效）；分级破碎轮不满足门槛时物品被销毁（原生行为），锯/磨石则原样退回。
+- crushing/milling/cutting 自 CMM 3.0 起随分级破碎轮/机械锯常驻可设门槛；研磨由破碎轮控制器承载（无分级磨石）。分级破碎轮不满足门槛时物品被销毁（原生行为），锯则原样退回；破碎轮按等级的产量放大不受门槛与择优影响。
 
 ## 改动前必读
 

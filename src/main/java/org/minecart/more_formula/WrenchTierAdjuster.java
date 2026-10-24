@@ -22,7 +22,7 @@ import org.minecart.more_formula.util.TierHelper;
  * 用 Create 扳手<b>普通右键</b>循环调整机器的「运行等级」。
  *
  * <h2>为什么用事件而不是给方块加 {@code IWrenchable}</h2>
- * CMM / CMMM 的机器方块既<b>没有</b>实现 {@code IWrenchable}，也不在
+ * CMM 的机器方块既<b>没有</b>实现 {@code IWrenchable}，也不在
  * {@code create:wrench_pickup} 标签里（两条都已用字节码/jar 内容确认），
  * 所以扳手普通右键在它们身上原本<b>什么都不做</b>（走 {@code Item.useOn} 返回 PASS）。
  * 因此这里监听右键事件即可，既不用给 CMM 的方块打 mixin，也不抢任何既有交互。
@@ -40,7 +40,7 @@ import org.minecart.more_formula.util.TierHelper;
  * 把运行等级写到控制器（见 {@link CrushingWheelPair}）。
  *
  * <h2>只改「配方优先级」，不动速度与并行</h2>
- * 速度与并行倍率读的是 CMM/CMMM 自己的 {@code getTier()}（出厂等级，不可变），
+ * 速度与并行倍率读的是 CMM 自己的 {@code getTier()}（出厂等级，不可变），
  * 本功能把运行等级存在<b>另外一份</b>数据里，因此调它不会改变处理速度与并行数。
  */
 @EventBusSubscriber(modid = More_formula.MODID)

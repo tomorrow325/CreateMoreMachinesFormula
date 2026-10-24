@@ -26,7 +26,6 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.fml.loading.FMLLoader;
 import net.yxiao233.createmoremachines.api.registry.BuiltInAdvancedMachineTypes;
 import org.jetbrains.annotations.NotNull;
 import org.minecart.more_formula.Config;
@@ -42,7 +41,6 @@ import org.minecart.more_formula.compat.jei.category.TieredSequencedAssemblyCate
 import org.minecart.more_formula.compat.jei.category.TieredSpoutCategory;
 import org.minecart.more_formula.compat.jei.category.sequenced.TieredMachineContext;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -93,18 +91,6 @@ public class MoreFormulaJeiPlugin implements IModPlugin {
     private final Set<Integer> tiersRegisteredWithRecipes = new LinkedHashSet<>();
     private List<Kind> kinds;
 
-    /** CMMM（可选依赖）解析出的分级机器条目；{@code null} = 不在场或桥接失败。 */
-    private record CMMMMachines(BuiltInAdvancedMachineTypes.AdvancedMachineType<?> crushingWheel,
-                                BuiltInAdvancedMachineTypes.AdvancedMachineType<?> mechanicalSaw) {
-    }
-
-    private static final String CMMM_MODID = "createmoremoremachines";
-    private static final String CMMM_JEI_BRIDGE =
-            "org.minecart.more_formula.compat.createmoremoremachines.CMMMJeiBridge";
-    private static volatile boolean cmmmBridgeResolved;
-    private static CMMMMachines cmmmMachines;
-    private static boolean cmmmBridgeWarned;
-
     @Override
     public @NotNull ResourceLocation getPluginUid() {
         return ResourceLocation.fromNamespaceAndPath(More_formula.MODID, "jei");
@@ -112,8 +98,6 @@ public class MoreFormulaJeiPlugin implements IModPlugin {
 
     private List<Kind> kinds() {
         if (kinds == null) {
-            // 先收集后条件追加：CMMM（可选依赖）缺席时，下面的集合与历史上只认 CMM 的版本逐项相同。
-            CMMMMachines cmmm = cmmmBridge();
             List<Kind> collected = new ArrayList<>();
             collected.add(new Kind(AllRecipeTypes.PRESSING, "pressing", 177, 70,
                     machines(BuiltInAdvancedMachineTypes.PRESS),
@@ -134,25 +118,21 @@ public class MoreFormulaJeiPlugin implements IModPlugin {
                     machines(BuiltInAdvancedMachineTypes.DEPLOYER),
                     (info, machine, basin, tierName) -> new ItemApplicationCategory(castInfo(info))));
             collected.add(new Kind(AllRecipeTypes.SEQUENCED_ASSEMBLY, "sequenced_assembly", 180, 115,
-                    // 序列装配常含锯切工序：CMMM 在场时分级锯是真实执行者，追加为催化剂。
-                    cmmm == null
-                            ? machines(BuiltInAdvancedMachineTypes.PRESS, BuiltInAdvancedMachineTypes.SPOUT, BuiltInAdvancedMachineTypes.DEPLOYER)
-                            : machines(BuiltInAdvancedMachineTypes.PRESS, BuiltInAdvancedMachineTypes.SPOUT, BuiltInAdvancedMachineTypes.DEPLOYER,
-                            cmmm.mechanicalSaw()),
+                    // 序列装配常含锯切工序：CMM 3.0 的分级锯是真实执行者，列为催化剂。
+                    machines(BuiltInAdvancedMachineTypes.PRESS, BuiltInAdvancedMachineTypes.SPOUT,
+                            BuiltInAdvancedMachineTypes.DEPLOYER, BuiltInAdvancedMachineTypes.SAW),
                     (info, machine, basin, tierName) -> new TieredSequencedAssemblyCategory(castInfo(info), sequencedContext(tierName))));
-            if (cmmm != null) {
-                // 三个分级分类只在 CMMM 的分级机器真实存在时才建；
-                // milling 由分级破碎轮控制器执行（CMMM 无分级磨石），催化剂同为分级破碎轮。
-                collected.add(new Kind(AllRecipeTypes.CRUSHING, "crushing", 177, 100,
-                        machines(cmmm.crushingWheel()),
-                        (info, machine, basin, tierName) -> new TieredCrushingCategory(castInfo(info), state(machine))));
-                collected.add(new Kind(AllRecipeTypes.MILLING, "milling", 177, 53,
-                        machines(cmmm.crushingWheel()),
-                        (info, machine, basin, tierName) -> new TieredMillingCategory(castInfo(info), state(machine))));
-                collected.add(new Kind(AllRecipeTypes.CUTTING, "cutting", "sawing", 177, 70,
-                        machines(cmmm.mechanicalSaw()),
-                        (info, machine, basin, tierName) -> new TieredCuttingCategory(castInfo(info), state(machine))));
-            }
+            // CMM 3.0 起分级破碎轮/锯是 CMM 本体机器（一等类型常驻解析）；
+            // milling 由分级破碎轮控制器执行（CMM 3.0 无分级磨石），催化剂同为分级破碎轮。
+            collected.add(new Kind(AllRecipeTypes.CRUSHING, "crushing", 177, 100,
+                    machines(BuiltInAdvancedMachineTypes.CRUSHING_WHEEL),
+                    (info, machine, basin, tierName) -> new TieredCrushingCategory(castInfo(info), state(machine))));
+            collected.add(new Kind(AllRecipeTypes.MILLING, "milling", 177, 53,
+                    machines(BuiltInAdvancedMachineTypes.CRUSHING_WHEEL),
+                    (info, machine, basin, tierName) -> new TieredMillingCategory(castInfo(info), state(machine))));
+            collected.add(new Kind(AllRecipeTypes.CUTTING, "cutting", "sawing", 177, 70,
+                    machines(BuiltInAdvancedMachineTypes.SAW),
+                    (info, machine, basin, tierName) -> new TieredCuttingCategory(castInfo(info), state(machine))));
             kinds = List.copyOf(collected);
         }
         return kinds;
@@ -397,9 +377,8 @@ public class MoreFormulaJeiPlugin implements IModPlugin {
     }
 
     private static TieredMachineContext sequencedContext(String tierName) {
-        // CMMM 的分级轮/锯与 CMM 共享 CMMTier 实例，entry() 同键查找（createmoremachines:<tier>）
-        // 即可拿到 CMMM 注册的方块；该档未注册时 entry 为 null → 回退原版渲染。
-        CMMMMachines cmmm = cmmmBridge();
+        // CMM 3.0 的分级锯是一等机器类型，entry() 同键查找即可拿到各档方块；
+        // 该档未注册时 entry 为 null → 回退原版渲染。
         return new TieredMachineContext(
                 safeState(entry(BuiltInAdvancedMachineTypes.PRESS, tierName), AllBlocks.MECHANICAL_PRESS.getDefaultState()),
                 safeState(entry(BuiltInAdvancedMachineTypes.SPOUT, tierName), AllBlocks.SPOUT.getDefaultState()),
@@ -407,55 +386,8 @@ public class MoreFormulaJeiPlugin implements IModPlugin {
                 safeState(entry(BuiltInAdvancedMachineTypes.DEPLOYER, tierName), AllBlocks.DEPLOYER.getDefaultState()),
                 depotState(tierName),
                 basinState(entry(BuiltInAdvancedMachineTypes.BASIN, tierName)),
-                cmmm == null ? null : safeState(entry(cmmm.mechanicalSaw(), tierName), null)
+                safeState(entry(BuiltInAdvancedMachineTypes.SAW, tierName), null)
         );
-    }
-
-    /**
-     * CMMM（可选依赖）的分级破碎轮/分级锯注册表条目。
-     * 返回 {@code null} 表示「CMMM 不在场，或桥接类加载/自检失败」—— 两种情况都按
-     * 「没有分级机器」处理：不建 crushing/milling/cutting 分类、序列装配催化剂不追加锯、
-     * 锯切工序回退原版渲染。
-     *
-     * <p>为什么反射而不是直接 import：本类随 JEI 常驻加载，任何对 CMMM 类型的直接引用
-     * 都会在未安装 CMMM 时 NoClassDefFoundError（对 CMM 本体的引用则是安全的 —— 必需依赖）。
-     * 因此先用 {@code FMLLoader.getLoadingModList()} 判在场（与 mixin 配置插件同一写法），
-     * 才 {@code Class.forName} 加载 {@code CMMMJeiBridge}（全模组唯一直接引用 CMMM
-     * 注册表条目的地方），并对两个方法各做一次非空自检；失败只 warn 一次并永久按缺席处理
-     * （镜像 {@code TierHelper} 的 warn-once 写法）。
-     */
-    private static CMMMMachines cmmmBridge() {
-        if (!cmmmBridgeResolved) {
-            cmmmBridgeResolved = true;
-            cmmmMachines = resolveCMMMBridge();
-        }
-        return cmmmMachines;
-    }
-
-    private static CMMMMachines resolveCMMMBridge() {
-        try {
-            if (FMLLoader.getLoadingModList() == null
-                    || FMLLoader.getLoadingModList().getModFileById(CMMM_MODID) == null) {
-                return null;
-            }
-            Class<?> bridge = Class.forName(CMMM_JEI_BRIDGE, true, MoreFormulaJeiPlugin.class.getClassLoader());
-            Method crushingWheel = bridge.getMethod("crushingWheel");
-            Method mechanicalSaw = bridge.getMethod("mechanicalSaw");
-            Object wheel = crushingWheel.invoke(null);
-            Object saw = mechanicalSaw.invoke(null);
-            if (!(wheel instanceof BuiltInAdvancedMachineTypes.AdvancedMachineType<?> crushing)
-                    || !(saw instanceof BuiltInAdvancedMachineTypes.AdvancedMachineType<?> sawMachine)) {
-                throw new IllegalStateException("CMMMJeiBridge returned a null machine entry");
-            }
-            return new CMMMMachines(crushing, sawMachine);
-        } catch (Throwable t) {
-            if (!cmmmBridgeWarned) {
-                cmmmBridgeWarned = true;
-                More_formula.LOGGER.warn("more_formula: failed to load the CreateMoreMoreMachines JEI bridge,"
-                        + " tiered crushing/milling/cutting categories stay hidden", t);
-            }
-            return null;
-        }
     }
 
     private static BlockEntry<? extends Block> basin(int tier) {
@@ -463,16 +395,15 @@ public class MoreFormulaJeiPlugin implements IModPlugin {
     }
 
     private static BlockEntry<? extends Block> machine(AllRecipeTypes type, int tier) {
-        CMMMMachines cmmm = cmmmBridge();
         BuiltInAdvancedMachineTypes.AdvancedMachineType<?> advancedType = switch (type) {
             case PRESSING, COMPACTING, SEQUENCED_ASSEMBLY -> BuiltInAdvancedMachineTypes.PRESS;
             case MIXING -> BuiltInAdvancedMachineTypes.MIXER;
             case FILLING -> BuiltInAdvancedMachineTypes.SPOUT;
             case DEPLOYING, ITEM_APPLICATION -> BuiltInAdvancedMachineTypes.DEPLOYER;
-            // 分级破碎轮/分级锯由可选依赖 CMMM 提供（milling 由分级破碎轮控制器执行，
-            // 见 TieredMillingCategory）；CMMM 缺席时为 null = 不建该分类。
-            case CRUSHING, MILLING -> cmmm == null ? null : cmmm.crushingWheel();
-            case CUTTING -> cmmm == null ? null : cmmm.mechanicalSaw();
+            // CMM 3.0 的分级破碎轮/锯是一等机器类型；milling 由分级破碎轮控制器执行
+            // （见 TieredMillingCategory），催化剂同为分级破碎轮。
+            case CRUSHING, MILLING -> BuiltInAdvancedMachineTypes.CRUSHING_WHEEL;
+            case CUTTING -> BuiltInAdvancedMachineTypes.SAW;
             default -> null;
         };
         if (advancedType == null) {

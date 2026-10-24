@@ -15,17 +15,18 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.items.wrapper.RecipeWrapper;
+import net.yxiao233.createmoremachines.api.content.crushing_wheel.CMMCrushingWheelBlockEntity;
+import net.yxiao233.createmoremachines.api.content.crushing_wheel.CMMCrushingWheelControllerBlockEntity;
 import net.yxiao233.createmoremachines.api.content.mechanical.deployer.CMMDeployerBlockEntity;
 import net.yxiao233.createmoremachines.api.content.mechanical.mixer.CMMMechanicalMixerBlockEntity;
 import net.yxiao233.createmoremachines.api.content.mechanical.press.CMMMechanicalPressBlockEntity;
+import net.yxiao233.createmoremachines.api.content.mechanical.saw.CMMMechanicalSawBlockEntity;
 import net.yxiao233.createmoremachines.api.content.spout.CMMSpoutBlockEntity;
 import org.jetbrains.annotations.Nullable;
 import org.minecart.more_formula.Config;
 import org.minecart.more_formula.MachinePriority;
-import org.minecart.more_formula.More_formula;
 import org.minecart.more_formula.PriorityRules;
 
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -41,19 +42,7 @@ public class TierHelper {
     private static final int CMM_TIER_OFFSET = 1;
 
     /**
-     * 可选依赖 CreateMoreMoreMachines 的方块实体包名前缀。只做字符串比较、
-     * 不解析任何类：命中前缀才说明该模组确实在场，此时才允许去加载桥接类
-     * （见 {@link #externalMachineTier}）。
-     */
-    private static final String CMMM_PACKAGE = "net.tomorrow325.createmoremoremachines.";
-    /** 反射桥接类：内部对 CMMM 类型的直接引用在未安装时绝不能被类加载。 */
-    private static final String CMMM_BRIDGE =
-            "org.minecart.more_formula.compat.createmoremoremachines.CMMMTierBridge";
-    private static volatile Method cmmmTierMethod;
-    private static boolean cmmmBridgeWarned;
-
-    /**
-     * 机器的<b>真实等级</b>（CMM/CMMM 出厂等级，原版机器为 0）。
+     * 机器的<b>真实等级</b>（CMM 出厂等级，原版机器为 0）。
      *
      * <p>这个值不受玩家手动设定的「运行等级」影响 —— 处理速度、并行倍率等
      * CMM 自身机制用的也是它，所以调运行等级不会改变那些。
@@ -71,12 +60,18 @@ public class TierHelper {
             cmmTier = deployer.getTier().getTierValue();
         } else if (machine instanceof CMMSpoutBlockEntity spout) {
             cmmTier = spout.getTier().getTierValue();
+        } else if (machine instanceof CMMCrushingWheelControllerBlockEntity controller) {
+            // CMM 3.0 并入的分级破碎轮：等级在控制器上（milling 回退查找也在控制器里）。
+            cmmTier = controller.getTier().getTierValue();
+        } else if (machine instanceof CMMCrushingWheelBlockEntity wheel) {
+            cmmTier = wheel.getTier().getTierValue();
+        } else if (machine instanceof CMMMechanicalSawBlockEntity saw) {
+            cmmTier = saw.getTier().getTierValue();
         } else {
             // 原版 Create 机器（或任何非 CMM 方块实体）视为 0 级。
-            // 注意这里**不**处理 CMM 的锯：CMM 2.7 没有发布任何锯方块
-            // （只有未启用的 API 类），因此不存在需要识别的锯机器。
-            // CMMM 的分级破碎轮/锯/鼓风机是可选依赖，经 {@link #externalMachineTier} 识别。
-            return externalMachineTier(machine);
+            // CMM 3.0 的分级鼓风机不在此列：鼓风处理配方（splashing 等）无机器
+            // 上下文，本模组未给它装门槛，识别它的等级没有意义。
+            return 0;
         }
         return toFormulaTier(cmmTier);
     }
@@ -136,52 +131,7 @@ public class TierHelper {
         return getAdmissionTier(machine);
     }
 
-    /**
-     * 识别可选依赖 CreateMoreMoreMachines 的机器（分级破碎轮/锯/鼓风机）并换算等级。
-     *
-     * <p>为什么不直接 instanceof：本类在主 mixin 配置（不门控）里被引用，
-     * 任何对 CMMM 类型的直接引用都会在未安装该模组时抛 NoClassDefFoundError。
-     * 因此先用「类名前缀 + 反射」判断 —— 前缀不匹配（= 模组未安装或原版机器）时
-     * 只花一次字符串比较，绝不触碰 CMMM 的类；命中后才加载
-     * {@code CMMMTierBridge}（该类只在前缀命中时才会被加载，内部才能安全地
-     * 直接引用 CMMM 类型）。
-     */
-    /**
-     * 纯函数：给定类名是否落在可选依赖 CreateMoreMoreMachines 的包名下。
-     * 前缀未命中（含 {@code null}/空串）时返回 {@code false}，且**绝不**触碰桥接类。
-     *
-     * <p>设为 public 是刻意的离线测试缝：{@code externalMachineTier} 需要
-     * BlockEntity 实例（离线构造不可行），而这条「前缀未命中 → 0、不加载桥接」的
-     * 半边规则可以脱离游戏进程用字符串直接断言。
-     */
-    public static boolean isCMMMClassName(String className) {
-        return className != null && className.startsWith(CMMM_PACKAGE);
-    }
-
-    private static int externalMachineTier(BlockEntity machine) {
-        if (!isCMMMClassName(machine.getClass().getName())) {
-            return 0;
-        }
-        try {
-            Method bridge = cmmmTierMethod;
-            if (bridge == null) {
-                bridge = Class.forName(CMMM_BRIDGE, true, TierHelper.class.getClassLoader())
-                        .getMethod("getMachineTier", BlockEntity.class);
-                cmmmTierMethod = bridge;
-            }
-            return (Integer) bridge.invoke(null, machine);
-        } catch (Throwable t) {
-            // 桥接失败按「原版机器」处理（拒绝带门槛的配方），只警告一次避免刷屏。
-            if (!cmmmBridgeWarned) {
-                cmmmBridgeWarned = true;
-                More_formula.LOGGER.warn("more_formula: failed to resolve CreateMoreMoreMachines tier for {}, treating as tier 0",
-                        machine.getClass().getName(), t);
-            }
-            return 0;
-        }
-    }
-
-    /** CMM/CMMM 等级值 → 本模组等级值。等级语义见类注释，纯函数便于离线回归。 */
+    /** CMM 等级值 → 本模组等级值。等级语义见类注释，纯函数便于离线回归。 */
     public static int toFormulaTier(int cmmTier) {
         if (cmmTier <= 1) {
             return cmmTier;

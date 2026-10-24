@@ -37,9 +37,9 @@ import java.util.Optional;
  * 会被研磨掉，而不是退回。这与投进任意不可研磨物品的原版表现相同；压力板/喷口那类
  * 「物品原样等待」的无损语义在破碎轮上不存在。
  *
- * <p>CMMM 的分级破碎轮控制器整体覆写了 {@code findRecipe}（不调用 super），
- * 因此本 mixin 只作用于原版控制器；CMMM 控制器由
- * {@code CMMMCrushingWheelControllerBlockEntityMixin} 单独拦截（同一套择优逻辑）。
+ * <p>CMM 3.0 的分级破碎轮控制器整体覆写了 {@code findRecipe}（不调用 super），
+ * 因此本 mixin 只作用于原版控制器；3.0 控制器由
+ * {@code CMMCrushingWheelControllerBlockEntityMixin} 单独拦截（同一套择优逻辑）。
  */
 @Mixin(CrushingWheelControllerBlockEntity.class)
 public abstract class CrushingWheelControllerBlockEntityMixin {

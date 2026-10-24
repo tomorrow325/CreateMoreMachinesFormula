@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * Copy of Create's {@link com.simibubi.create.compat.jei.category.animations.AnimatedSaw}
  * that renders a tier-specific saw body instead of the vanilla one.
  *
- * <p>刀片 partial 仍用 Create 命名空间（CMMM 不提供任何 partial 模型），
+ * <p>刀片 partial 仍用 Create 命名空间（CMM 不提供分级锯 partial 模型），
  * 分级语义由锯体方块状态承载。
  */
 public class TieredAnimatedSaw extends AnimatedKinetics {

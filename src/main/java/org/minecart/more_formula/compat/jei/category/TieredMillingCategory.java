@@ -14,7 +14,7 @@ public class TieredMillingCategory extends MillingCategory {
 
     public TieredMillingCategory(Info<AbstractCrushingRecipe> info, BlockState wheelState) {
         super(info);
-        // CMMM 没有分级磨石方块，milling 配方实际由分级破碎轮控制器执行
+        // CMM 3.0 没有分级磨石方块，milling 配方实际由分级破碎轮控制器执行
         // （控制器 findRecipe 先查 CRUSHING 再回退 MILLING），动画与实际执行者一致。
         this.crushingWheels = new TieredAnimatedCrushingWheels(wheelState, true);
     }

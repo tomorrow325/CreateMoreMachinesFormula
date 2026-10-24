@@ -6,6 +6,26 @@
 
 本mod由ai辅助开发
 
+## 0.2.5 更新说明
+
+0.1.2 之后的改动（**BREAKING**）：
+
+1. **适配 CMM 1.21.1-3.0：CreateMoreMoreMachines 已并入 CMM 本体**
+   分级破碎轮、分级机械锯（含研磨路径）与分级鼓风机自 CMM 3.0 起是 CMM 的原生机器
+   （命名空间 `createmoremachines`）。本模组删除了整个 CMMM 可选兼容层（反射桥接、
+   类名前缀探测、独立 mixin 配置），改为对 CMM 3.0 类型的直接识别；
+   `crushing`/`milling`/`cutting` 的门槛与 JEI 分级分类随 CMM 3.0 **常驻可用**，
+   不再依赖任何可选 mod。破碎轮的「按等级产量放大」在择优介入后照常生效。
+
+2. **最低 CMM 版本提升为 1.21.1-3.0**，不再支持「CMM 2.7 + 独立 CMMM」的旧组合。
+   迁移：门槛表按配方 ID 记录，玩家门槛配置无需改动；运行等级随方块实体生命周期，
+   换机器后需重调；Mekanical-Create 场景中旧 `createmoremoremachines` 命名空间的
+   模块物品停止享受倍率，请替换为 CMM 3.0 的 `createmoremachines` 模块。
+
+3. **分级鼓风机本轮不纳入等级体系**（照常工作）：鼓风处理配方
+   （splashing/haunting/blasting/smoking）的处理接口拿不到机器上下文，
+   在门槛化之前不给「调了没反应」的假控制。
+
 ## 0.1.2 更新说明
 
 0.1.1 之后的改动：
@@ -184,7 +204,7 @@
 | Minecraft | 1.21.1 |
 | NeoForge | 21.x |
 | Create | 6.0.10 或更高版本 |
-| Create: More Machines | 2.7 或更高版本 |
+| Create: More Machines | 1.21.1-3.0 或更高版本 |
 | KubeJS | 2101.7.2-build.285 或更高版本 |
 | KubeJS-Create | 2101.3.1-build.18 或更高版本 |
 
@@ -194,7 +214,6 @@
 |------|-------|----------|------|
 | Create: Hand Made | `create_hand_made` | 0.2.0-beta 或更高 | 手工机器只允许处理 `Tier.ZERO` 配方 |
 | Mekanical-Create | `mekanicalcreate` | 0.2.8 或更高（需 Mekanism） | 按 CMM 模块等级提供速度/并行加成（服务器 TOML 配置可调） |
-| CreateMoreMoreMachines | `createmoremoremachines` | 1.21.1-1.1 或更高 | 分级破碎轮/机械锯纳入等级门槛（见下方配方类型说明） |
 
 ## 功能
 
@@ -294,25 +313,25 @@ ServerEvents.recipes(event => {
 - `create:item_application`：拿物品的机械手
 - `create:sequenced_assembly`：序列装配
 
-以下类型在**原版 CMM** 里没有对应高级机器：
+以下类型没有对应高级机器：
 
-- `create:crushing` / `create:milling`：破碎轮 / 磨石
-- `create:cutting`（含切石）：机械锯
-- `create:splashing`：鼓风嘴
+- `create:splashing`：鼓风嘴（CMM 3.0 的分级鼓风机照常工作，但鼓风处理接口
+  拿不到机器上下文，本模组暂未给它装门槛，也不提供其运行等级调整）
 - `create:emptying`
 - 流体储罐和蒸汽引擎相关配方
 
-其中破碎、研磨、锯切三类在安装可选依赖 **CreateMoreMoreMachines** 后即有对应分级机器
-（分级破碎轮/磨石、分级机械锯），可以正常设置门槛；**未安装时不要给这些类型设门槛**，
-否则配方将无法被任何机器执行。另有两点机器原生行为需要注意：
+破碎、研磨、锯切三类自 CMM 3.0 起有原生分级机器（分级破碎轮、分级机械锯），
+可以正常设置门槛（**本模组要求 CMM 1.21.1-3.0+**）。研磨由分级破碎轮控制器承载
+（CMM/CMMM 均无分级磨石，磨石恒为 0 级）。两点机器原生行为需要注意：
 
 - 分级破碎轮对"等级不够"的配方按原版「无配方」处理：物品在倒计时结束后被研磨掉
-  （破碎轮对不可研磨物品的原生表现就是销毁，不存在"原样退回"）；
-- 分级机械锯与磨石则是无损的：不满足门槛的配方按"无匹配配方"处理，物品原样退回。
+  （破碎轮对不可研磨物品的原生表现就是销毁，不存在"原样退回"）；破碎轮的
+  「等级越高产得越多」不受门槛与择优影响；
+- 分级机械锯则是无损的：不满足门槛的配方按"无匹配配方"处理，物品原样退回。
 
-装了 CMMM 后，JEI 里设了门槛的 crushing/milling/cutting 配方会从原版 create 分类
+JEI 里设了门槛的 crushing/milling/cutting 配方会从原版 create 分类
 （锯切的原版分类是 create:sawing）隐藏、进入 more_formula 的分级分类，序列装配的
-锯切工序也渲染分级锯；**未装 CMMM 时 JEI 行为与旧版完全一致**（不建新分类、不隐藏）。
+锯切工序也渲染分级锯。这些分类随 CMM 3.0 常驻，与可选依赖无关。
 
 ## 按 ID 设置门槛
 

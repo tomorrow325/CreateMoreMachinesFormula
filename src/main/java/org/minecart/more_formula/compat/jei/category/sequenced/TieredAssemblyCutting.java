@@ -10,10 +10,10 @@ import org.minecart.more_formula.compat.jei.animation.TieredAnimatedSaw;
  * 分级序列装配里的「锯切」工序。
  *
  * <p>CMM 2.7 本体没有发布任何分级锯（{@code CMMTierPlugin} 对 SAW 调用了
- * {@code withoutAll()}），但可选依赖 CMMM 提供了五档分级锯。因此这里是条件渲染：
- * {@code context.sawState()} 非 null（CMMM 在场且该档注册了分级锯）时按原版
+ * {@code withoutAll()}），但 CMM 3.0 提供了五档分级锯。因此这里是条件渲染：
+ * {@code context.sawState()} 非 null（该档注册了分级锯）时按原版
  * {@code AssemblyCutting} 的几何渲染分级锯，否则委托 Create 原版的锯动画 ——
- * 与 CMMM 缺席时的现状完全一致。
+ * 与未设门槛时的现状完全一致。
  */
 public class TieredAssemblyCutting extends TieredSequencedAssemblySubCategory {
 

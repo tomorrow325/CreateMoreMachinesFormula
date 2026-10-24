@@ -18,7 +18,7 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
  * 「运行等级」（玩家手动设定的配方等级优先级）的存储。
  *
  * <h2>为什么是 Data Attachment，而不是直接改机器等级</h2>
- * CMM / CMMM 的等级字段是 {@code private final CMMTier tier}，构造时定死并写进 NBT，
+ * CMM 的等级字段是 {@code private final CMMTier tier}，构造时定死并写进 NBT，
  * <b>改不了</b>。所以运行等级必须是<b>另一个独立的值</b>。
  * 这同时天然满足「调低后处理速度与并行不变」：那两项倍率走 CMM 自己的
  * {@code CMMTier}（真实等级），与这里无关。

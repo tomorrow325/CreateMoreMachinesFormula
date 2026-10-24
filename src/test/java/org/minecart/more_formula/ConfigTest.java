@@ -8,13 +8,12 @@ package org.minecart.more_formula;
 // 双 map 合并后的优先级（D）。
 
 import net.minecraft.resources.ResourceLocation;
-import org.minecart.more_formula.compat.createmoremoremachines.CMMMTierBridge;
-import org.minecart.more_formula.compat.createmoremoremachines.MoreFormulaCreateMoreMoreMachinesMixinConfigPlugin;
 import org.minecart.more_formula.compat.handmade.HandMadeRecipeGate;
 import org.minecart.more_formula.compat.handmade.MoreFormulaHandMadeMixinConfigPlugin;
 import org.minecart.more_formula.compat.mekanicalcreate.MekanicalCreateRecipeGate;
 import org.minecart.more_formula.compat.mekanicalcreate.MekanicalCreateSpeedConfig;
 import org.minecart.more_formula.compat.mekanicalcreate.MoreFormulaMekanicalCreateMixinConfigPlugin;
+import org.minecart.more_formula.util.CrushingWheelPair;
 import org.minecart.more_formula.util.MachineRoster;
 import org.minecart.more_formula.util.TierHelper;
 
@@ -223,9 +222,9 @@ public final class ConfigTest {
         check("多个催化剂使用最高倍率而非相乘", () -> MekanicalCreateSpeedConfig.getHighestMultiplier(
                 List.of(2, 3, 1)) == 3);
 
-        // ---- CreateMoreMoreMachines（可选）：CMM 等级值 → 本模组等级值的平移 ----
-        // CMMM 复用 CMM 的 CMMTier（brass=2/netherite=3/end=4/beyond=5/creative=-1），
-        // 与 CMM 机器共用同一映射，不能因接入新机器而漂移。
+        // ---- CMM 3.0（CMMM 已并入）：CMM 等级值 → 本模组等级值的平移 ----
+        // 分级破碎轮/锯复用 CMM 的 CMMTier（brass=2/netherite=3/end=4/beyond=5/creative=-1），
+        // 与既有 CMM 机器共用同一映射，不能因接入新机器而漂移。
         check("CMM brass 等级平移为 1 级", () -> TierHelper.toFormulaTier(2) == 1);
         check("CMM netherite 等级平移为 2 级", () -> TierHelper.toFormulaTier(3) == 2);
         check("CMM end 等级平移为 3 级", () -> TierHelper.toFormulaTier(4) == 3);
@@ -244,19 +243,24 @@ public final class ConfigTest {
                 && !TierHelper.isTierAllowed(4, Config.CREATIVE_TIER));
         check("无门槛配方对所有机器放行", () -> TierHelper.isTierAllowed(0, 0));
 
-        // ---- 反射桥接类在未连接运行时也应安全加载并对 null 返回 0 级 ----
-        check("CMMM 桥接对 null 机器返回 0 级", () -> CMMMTierBridge.getMachineTier(null) == 0);
-
-        // ---- CreateMoreMoreMachines（可选）：类名前缀判定（externalMachineTier 的可离线半边）----
-        // 前缀未命中时绝不加载桥接 —— 原版机器走这条路，必须为 false。
-        check("CMMM 锯类名命中前缀", () -> TierHelper.isCMMMClassName(
-                "net.tomorrow325.createmoremoremachines.api.content.mechanical_saw.CMMMechanicalSawBlockEntity"));
-        check("原版 Create 类名不命中 CMMM 前缀", () -> !TierHelper.isCMMMClassName(
-                "com.simibubi.create.content.kinetics.saw.SawBlockEntity"));
-        check("CMM 本体类名不命中 CMMM 前缀", () -> !TierHelper.isCMMMClassName(
+        // ---- 破碎轮「轮子 ↔ 控制器」配对：CMM 3.0 类名判定（纯字符串，可离线断言）----
+        check("CMM 3.0 分级控制器是控制器", () -> CrushingWheelPair.isControllerByName(
+                "net.yxiao233.createmoremachines.api.content.crushing_wheel.CMMCrushingWheelControllerBlockEntity"));
+        check("原版控制器也是控制器（护目镜反查需要）", () -> CrushingWheelPair.isControllerByName(
+                "com.simibubi.create.content.kinetics.crusher.CrushingWheelControllerBlockEntity"));
+        check("压机不是控制器", () -> !CrushingWheelPair.isControllerByName(
                 "net.yxiao233.createmoremachines.api.content.mechanical.press.CMMMechanicalPressBlockEntity"));
-        check("CMMM 前缀对空串为 false", () -> !TierHelper.isCMMMClassName(""));
-        check("CMMM 前缀对 null 为 false", () -> !TierHelper.isCMMMClassName(null));
+        check("CMM 3.0 分级轮子是轮子且可调", () -> CrushingWheelPair.isTieredWheelByName(
+                "net.yxiao233.createmoremachines.api.content.crushing_wheel.CMMCrushingWheelBlockEntity"));
+        check("原版轮子是轮子但不可调", () -> !CrushingWheelPair.isTieredWheelByName(
+                "com.simibubi.create.content.kinetics.crusher.CrushingWheelBlockEntity")
+                && CrushingWheelPair.isWheelByName(
+                        "com.simibubi.create.content.kinetics.crusher.CrushingWheelBlockEntity"));
+        check("旧 CMMM 包名不再命中任何判定", () ->
+                !CrushingWheelPair.isControllerByName(
+                        "net.tomorrow325.createmoremoremachines.api.content.crushing_wheel.CMMCrushingWheelControllerBlockEntity")
+                        && !CrushingWheelPair.isWheelByName(
+                        "net.tomorrow325.createmoremoremachines.api.content.crushing_wheel.CMMCrushingWheelBlockEntity"));
 
         // ---- Create: Hand Made：共享闸门的空值面（加固前遍历 null 会 NPE）----
         check("onlyTierZero 对 null 输入返回空", () -> HandMadeRecipeGate.onlyTierZero(null).isEmpty());
@@ -266,44 +270,54 @@ public final class ConfigTest {
         check("isTierZeroResult 对 null 为 false", () -> !HandMadeRecipeGate.isTierZeroResult(null));
         check("isTierZeroResult 对非 holder 为 false", () -> !HandMadeRecipeGate.isTierZeroResult("x"));
 
-        // ---- Mekanical-Create：CMMM（可选）分级破碎轮/锯的双命名空间映射 ----
-        check("识别 CMMM 分级锯类别", () -> MekanicalCreateRecipeGate.getModuleKind(
-                rl("createmoremoremachines:brass_mechanical_saw"))
+        // ---- Mekanical-Create：CMM 3.0 分级破碎轮/锯的单命名空间映射 ----
+        check("识别 CMM 3.0 分级锯类别", () -> MekanicalCreateRecipeGate.getModuleKind(
+                rl("createmoremachines:brass_mechanical_saw"))
                 == MekanicalCreateRecipeGate.ModuleKind.SAW);
-        check("识别 CMMM 分级破碎轮类别", () -> MekanicalCreateRecipeGate.getModuleKind(
-                rl("createmoremoremachines:netherite_crushing_wheel"))
+        check("识别 CMM 3.0 分级破碎轮类别", () -> MekanicalCreateRecipeGate.getModuleKind(
+                rl("createmoremachines:netherite_crushing_wheel"))
                 == MekanicalCreateRecipeGate.ModuleKind.CRUSHING_WHEEL);
-        check("非机器 CMMM 物品不被接受", () -> MekanicalCreateRecipeGate.getModuleKind(
-                rl("createmoremoremachines:netherite_casing"))
+        check("非机器 CMM 物品不被接受", () -> MekanicalCreateRecipeGate.getModuleKind(
+                rl("createmoremachines:netherite_casing"))
                 == MekanicalCreateRecipeGate.ModuleKind.NONE);
-        check("CMMM brass 分级锯为 1 级", () -> MekanicalCreateRecipeGate.getModuleTier(
-                rl("createmoremoremachines:brass_mechanical_saw")) == 1);
-        check("CMMM netherite 分级锯为 2 级", () -> MekanicalCreateRecipeGate.getModuleTier(
-                rl("createmoremoremachines:netherite_mechanical_saw")) == 2);
-        check("CMMM end 分级破碎轮为 3 级", () -> MekanicalCreateRecipeGate.getModuleTier(
-                rl("createmoremoremachines:end_crushing_wheel")) == 3);
-        check("CMMM beyond 分级破碎轮为 4 级", () -> MekanicalCreateRecipeGate.getModuleTier(
-                rl("createmoremoremachines:beyond_crushing_wheel")) == 4);
-        check("CMMM creative 分级锯为创造级", () -> MekanicalCreateRecipeGate.getModuleTier(
-                rl("createmoremoremachines:creative_mechanical_saw")) == Config.CREATIVE_TIER);
-        check("CMMM 无前缀物品为 0 级", () -> MekanicalCreateRecipeGate.getModuleTier(
-                rl("createmoremoremachines:casing")) == 0);
-        check("create 命名空间 CMMM 前缀仍为 0 级", () -> MekanicalCreateRecipeGate.getModuleTier(
+        check("CMM brass 分级锯为 1 级", () -> MekanicalCreateRecipeGate.getModuleTier(
+                rl("createmoremachines:brass_mechanical_saw")) == 1);
+        check("CMM netherite 分级锯为 2 级", () -> MekanicalCreateRecipeGate.getModuleTier(
+                rl("createmoremachines:netherite_mechanical_saw")) == 2);
+        check("CMM end 分级破碎轮为 3 级", () -> MekanicalCreateRecipeGate.getModuleTier(
+                rl("createmoremachines:end_crushing_wheel")) == 3);
+        check("CMM beyond 分级破碎轮为 4 级", () -> MekanicalCreateRecipeGate.getModuleTier(
+                rl("createmoremachines:beyond_crushing_wheel")) == 4);
+        check("CMM creative 分级锯为创造级", () -> MekanicalCreateRecipeGate.getModuleTier(
+                rl("createmoremachines:creative_mechanical_saw")) == Config.CREATIVE_TIER);
+        check("CMM 无前缀物品为 0 级", () -> MekanicalCreateRecipeGate.getModuleTier(
+                rl("createmoremachines:casing")) == 0);
+        check("create 命名空间档位前缀仍为 0 级", () -> MekanicalCreateRecipeGate.getModuleTier(
                 rl("create:beyond_mechanical_saw")) == 0);
-        check("普通槽接受 CMMM 分级锯", () -> MekanicalCreateRecipeGate.isSupportedModule(
-                rl("createmoremoremachines:brass_mechanical_saw"), false));
-        check("普通槽接受 CMMM 分级破碎轮", () -> MekanicalCreateRecipeGate.isSupportedModule(
-                rl("createmoremoremachines:end_crushing_wheel"), false));
-        check("CMMM 分级锯匹配 Create 锯配方分支", () -> MekanicalCreateRecipeGate.matchesCreateModule(
-                rl("createmoremoremachines:brass_mechanical_saw"), rl("create:mechanical_saw"), true));
-        check("CMMM 分级破碎轮匹配 Create 破碎轮分支", () -> MekanicalCreateRecipeGate.matchesCreateModule(
-                rl("createmoremoremachines:netherite_crushing_wheel"), rl("create:crushing_wheel"), true));
-        check("CMMM 分级锯不冒充其他 Create 机器", () -> !MekanicalCreateRecipeGate.matchesCreateModule(
-                rl("createmoremoremachines:brass_mechanical_saw"), rl("create:deployer"), true));
-        check("CMMM 分级锯匹配 sawing 序列步骤", () -> MekanicalCreateRecipeGate.matchesSequenceModule(
-                rl("createmoremoremachines:brass_mechanical_saw"), rl("create:mechanical_saw")));
-        check("CMMM 分级破碎轮不映射序列步骤", () -> !MekanicalCreateRecipeGate.matchesSequenceModule(
-                rl("createmoremoremachines:netherite_crushing_wheel"), rl("create:crushing_wheel")));
+        check("普通槽接受 CMM 分级锯", () -> MekanicalCreateRecipeGate.isSupportedModule(
+                rl("createmoremachines:brass_mechanical_saw"), false));
+        check("普通槽接受 CMM 分级破碎轮", () -> MekanicalCreateRecipeGate.isSupportedModule(
+                rl("createmoremachines:end_crushing_wheel"), false));
+        check("CMM 分级锯匹配 Create 锯配方分支", () -> MekanicalCreateRecipeGate.matchesCreateModule(
+                rl("createmoremachines:brass_mechanical_saw"), rl("create:mechanical_saw"), true));
+        check("CMM 分级破碎轮匹配 Create 破碎轮分支", () -> MekanicalCreateRecipeGate.matchesCreateModule(
+                rl("createmoremachines:netherite_crushing_wheel"), rl("create:crushing_wheel"), true));
+        check("CMM 分级锯不冒充其他 Create 机器", () -> !MekanicalCreateRecipeGate.matchesCreateModule(
+                rl("createmoremachines:brass_mechanical_saw"), rl("create:deployer"), true));
+        check("CMM 分级锯匹配 sawing 序列步骤", () -> MekanicalCreateRecipeGate.matchesSequenceModule(
+                rl("createmoremachines:brass_mechanical_saw"), rl("create:mechanical_saw")));
+        check("CMM 分级破碎轮不映射序列步骤", () -> !MekanicalCreateRecipeGate.matchesSequenceModule(
+                rl("createmoremachines:netherite_crushing_wheel"), rl("create:crushing_wheel")));
+
+        // ---- 退役的 createmoremoremachines 命名空间不再识别（独立 CMMM 已并入 CMM 3.0）----
+        check("旧 CMMM 命名空间分级锯不再识别", () -> MekanicalCreateRecipeGate.getModuleKind(
+                rl("createmoremoremachines:brass_mechanical_saw"))
+                == MekanicalCreateRecipeGate.ModuleKind.NONE);
+        check("旧 CMMM 命名空间分级破碎轮不再识别", () -> MekanicalCreateRecipeGate.getModuleKind(
+                rl("createmoremoremachines:netherite_crushing_wheel"))
+                == MekanicalCreateRecipeGate.ModuleKind.NONE);
+        check("旧 CMMM 命名空间物品一律 0 级", () -> MekanicalCreateRecipeGate.getModuleTier(
+                rl("createmoremoremachines:creative_mechanical_saw")) == 0);
 
         // ---- Mekanical-Create：CMMM 新模块的倍率配置段（不触发 IntValue.get，仅看段注册）----
         check("分级破碎轮/锯各有独立 5 档配置段", () ->
@@ -314,16 +328,9 @@ public final class ConfigTest {
 
         // ---- mixin 配置插件门控：模组不在场时门必须关死 ----
         // 离线 JVM 未引导 FML，FMLLoader.getLoadingModList() 返回 null，插件判空后按
-        // 「可选依赖不在场」处理 —— 这是「未装 CMMM/手搓学时零回归、桥接类绝不加载」的
-        // 机制半边：mixin 不注入 → 世界内不执行 → 桥接类不被触碰。
+        // 「可选依赖不在场」处理 —— 这是「未装手搓学/Mekanical-Create 时零回归」的
+        // 机制半边：mixin 不注入 → 世界内不执行。
         // 「模组在场 → 门打开」的另一半需要真实 FML 运行时，只能进游戏验证。
-        MoreFormulaCreateMoreMoreMachinesMixinConfigPlugin cmmmPlugin =
-                new MoreFormulaCreateMoreMoreMachinesMixinConfigPlugin();
-        cmmmPlugin.onLoad("mixin.more_formula.createmoremoremachines");
-        check("CMMM 不在场时其 mixin 不应用", () -> !cmmmPlugin.shouldApplyMixin(
-                "com.simibubi.create.content.kinetics.crusher.CrushingWheelControllerBlockEntity",
-                "org.minecart.more_formula.compat.createmoremoremachines.mixin.CMMMCrushingWheelControllerBlockEntityMixin"));
-
         MoreFormulaHandMadeMixinConfigPlugin handMadePlugin = new MoreFormulaHandMadeMixinConfigPlugin();
         handMadePlugin.onLoad("mixin.more_formula.handmade");
         check("手搓学不在场时其 mixin 不应用", () -> !handMadePlugin.shouldApplyMixin(
@@ -610,7 +617,7 @@ public final class ConfigTest {
     //  名单是「扳手能调」与「护目镜显示」共用的唯一来源，所以它一旦漂移，
     //  症状只在游戏里出现（能调但不显示 / 显示但调不动）。这里把名单钉住。
     //
-    //  刻意<b>不含</b> CMMM 的鼓风机（encased_fan）：它的配方是 Create 的鼓风处理
+    //  刻意<b>不含</b> CMM 3.0 的分级鼓风机（encased_fan）：它的配方是 Create 的鼓风处理
     //  （splashing / haunting / blasting / smoking），本模组从未给这些配方装闸门
     //  （TierHelper 只覆盖 pressing / mixing / compacting / filling / deploying /
     //  cutting / crushing / milling），而 FanProcessingType.canProcess 拿不到
@@ -619,7 +626,7 @@ public final class ConfigTest {
     // =========================================================================
 
     private static void machineRosterTests() {
-        check("名单：7 台受支持机器", () -> MachineRoster.size() == 7);
+        check("名单：6 台受支持机器", () -> MachineRoster.size() == 6);
 
         // ---- 应当入册 ----
         check("名单含 CMM 压机", () -> MachineRoster.isSupported(
@@ -630,19 +637,19 @@ public final class ConfigTest {
                 "net.yxiao233.createmoremachines.api.content.mechanical.deployer.CMMDeployerBlockEntity"));
         check("名单含 CMM 喷口", () -> MachineRoster.isSupported(
                 "net.yxiao233.createmoremachines.api.content.spout.CMMSpoutBlockEntity"));
-        check("名单含 CMM 动力锯", () -> MachineRoster.isSupported(
-                "net.yxiao233.createmoremachines.api.content.saw.CMMSawBlockEntity"));
-        check("名单含 CMMM 破碎轮控制器", () -> MachineRoster.isSupported(
-                MachineRoster.CMMM_CRUSHING_WHEEL_CONTROLLER));
-        check("名单含 CMMM 分级锯", () -> MachineRoster.isSupported(
-                "net.tomorrow325.createmoremoremachines.api.content.mechanical_saw.CMMMechanicalSawBlockEntity"));
+        check("名单含 CMM 3.0 分级锯", () -> MachineRoster.isSupported(
+                "net.yxiao233.createmoremachines.api.content.mechanical.saw.CMMMechanicalSawBlockEntity"));
+        check("名单含 CMM 3.0 破碎轮控制器", () -> MachineRoster.isSupported(
+                MachineRoster.CMM_CRUSHING_WHEEL_CONTROLLER));
 
         // ---- 应当被排除 ----
-        check("名单不含 CMMM 鼓风机（本模组没有鼓风处理闸门）", () -> !MachineRoster.isSupported(
-                "net.tomorrow325.createmoremoremachines.api.content.encased_fan.CMMEncasedFanBlockEntity"));
-        check("名单不含 CMMM 破碎轮「轮子」（数据在控制器上，轮子只是入口）",
+        check("名单不含 CMM 3.0 分级鼓风机（本模组没有鼓风处理闸门）", () -> !MachineRoster.isSupported(
+                "net.yxiao233.createmoremachines.api.content.encased_fan.CMMEncasedFanBlockEntity"));
+        check("名单不含 CMM 3.0 破碎轮「轮子」（数据在控制器上，轮子只是入口）",
                 () -> !MachineRoster.isSupported(
-                        "net.tomorrow325.createmoremoremachines.api.content.crushing_wheel.CMMCrushingWheelBlockEntity"));
+                        "net.yxiao233.createmoremachines.api.content.crushing_wheel.CMMCrushingWheelBlockEntity"));
+        check("名单不含旧 CMMM 包名的控制器（已退役）", () -> !MachineRoster.isSupported(
+                "net.tomorrow325.createmoremoremachines.api.content.crushing_wheel.CMMCrushingWheelControllerBlockEntity"));
         check("名单不含原版 Create 破碎轮控制器（0 级，不可调）", () -> !MachineRoster.isSupported(
                 "com.simibubi.create.content.kinetics.crusher.CrushingWheelControllerBlockEntity"));
         check("名单不含 CMM 工作盆", () -> !MachineRoster.isSupported(

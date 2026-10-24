@@ -140,8 +140,9 @@ dependencies {
     // see run/logs/latest.log of the 6.0.9 smoke test).
     implementation("com.simibubi.create:create-1.21.1:6.0.10-281") { transitive = false }
 
-    // Create: More Machines 2.7
-    implementation files("libs/createmoremachines-1.21.1-2.7.jar")
+    // Create: More Machines 1.21.1-3.0 (CMMM merged upstream: tiered crushing wheels,
+    // mechanical saws and encased fans are first-class CMM machines since 3.0)
+    implementation files("libs/createmoremachines-1.21.1-3.0.jar")
 
     // Ponder API (referenced by CMM class hierarchy) — pinned to the version embedded
     // in create's jarJar to avoid compiling against newer runtime API.
@@ -194,13 +195,6 @@ dependencies {
     if (!noOptionalRuntime) {
         runtimeOnly mekanismJars
     }
-
-    // CreateMoreMoreMachines is optional. Put its jar in libs/ only when developing with it.
-    def createMoreMoreMachinesJars = fileTree(dir: 'libs', include: ['createmoremoremachines-*.jar'])
-    compileOnly createMoreMoreMachinesJars
-    if (!noOptionalRuntime) {
-        runtimeOnly createMoreMoreMachinesJars
-    }
 }
 
 // ConfigTest is a main()-style regression suite rather than a JUnit test,
@@ -233,8 +227,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
                              mod_authors            : mod_authors,
                              mod_description        : mod_description,
                              create_hand_made_version: create_hand_made_version,
-                             mekanicalcreate_version : mekanicalcreate_version,
-                             createmoremoremachines_version: createmoremoremachines_version]
+                             mekanicalcreate_version : mekanicalcreate_version]
     inputs.properties replaceProperties
     expand replaceProperties
     from "src/main/templates"

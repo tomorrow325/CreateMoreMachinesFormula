@@ -13,8 +13,6 @@ import java.util.List;
 
 public final class MekanicalCreateRecipeGate {
     private static final String CMM_NAMESPACE = "createmoremachines";
-    /** 可选依赖 CreateMoreMoreMachines 的命名空间：分级机器与 CMM 共享 CMMTier 实例，同语义识别。 */
-    private static final String CMMM_NAMESPACE = "createmoremoremachines";
     private static final String CANDIDATE_SUFFIX = "/mekanicalcreate_";
     private static volatile Method candidateIdAccessor;
 
@@ -139,9 +137,9 @@ public final class MekanicalCreateRecipeGate {
                 || path.equals("beyond_" + machineName);
     }
 
-    /** CMM 本体与可选依赖 CMMM 的分级机器都挂在这两个命名空间下。 */
+    /** CMM 3.0（CMMM 已并入）的分级机器都挂在 createmoremachines 命名空间下。 */
     private static boolean isTieredModuleNamespace(String namespace) {
-        return CMM_NAMESPACE.equals(namespace) || CMMM_NAMESPACE.equals(namespace);
+        return CMM_NAMESPACE.equals(namespace);
     }
 
     public static int getModuleTier(ResourceLocation moduleId) {
