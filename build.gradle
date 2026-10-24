@@ -195,6 +195,14 @@ dependencies {
     if (!noOptionalRuntime) {
         runtimeOnly mekanismJars
     }
+
+    // Jade is optional. Its plugin class is only instantiated by Jade itself,
+    // so absence at runtime needs no gating beyond keeping the jar off the classpath.
+    def jadeJars = fileTree(dir: 'libs', include: ['jade-*.jar'])
+    compileOnly jadeJars
+    if (!noOptionalRuntime) {
+        runtimeOnly jadeJars
+    }
 }
 
 // ConfigTest is a main()-style regression suite rather than a JUnit test,
@@ -227,7 +235,8 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
                              mod_authors            : mod_authors,
                              mod_description        : mod_description,
                              create_hand_made_version: create_hand_made_version,
-                             mekanicalcreate_version : mekanicalcreate_version]
+                             mekanicalcreate_version : mekanicalcreate_version,
+                             jade_version           : jade_version]
     inputs.properties replaceProperties
     expand replaceProperties
     from "src/main/templates"

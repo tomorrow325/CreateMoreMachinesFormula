@@ -3,6 +3,7 @@ package org.minecart.more_formula.util;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import org.jetbrains.annotations.Nullable;
 import org.minecart.more_formula.MachinePriority;
 import org.minecart.more_formula.TierNames;
 
@@ -35,23 +36,38 @@ public final class GoggleLines {
      * 会因为不在支持名单里而被跳过，行为不变。
      */
     public static void append(List<Component> tooltip, BlockEntity be) {
-        if (be == null) {
+        List<Component> lines = buildLines(be);
+        if (lines == null) {
             return;
+        }
+        tooltip.addAll(lines);
+    }
+
+    /**
+     * 构造「机械等级 + 运行等级」两行；不是受支持机器（或数据源缺失）时返回 {@code null}。
+     *
+     * <p>护目镜 mixin 与 Jade 提供器共用本出口，保证两个显示面逐字一致。
+     */
+    @Nullable
+    public static List<Component> buildLines(BlockEntity be) {
+        if (be == null) {
+            return null;
         }
         BlockEntity dataSource = resolveDataSource(be);
         if (dataSource == null) {
-            return;
+            return null;
         }
         int realTier = TierHelper.getRealMachineTier(dataSource);
         int running = TierHelper.getRunningTier(dataSource);
         int effective = running == MachinePriority.UNSET ? realTier : running;
 
-        tooltip.add(Component.translatable("more_formula.goggle.machine_tier",
-                        TierNames.colored(realTier))
-                .withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("more_formula.goggle.running_tier",
-                        TierNames.colored(effective))
-                .withStyle(ChatFormatting.GRAY));
+        return List.of(
+                Component.translatable("more_formula.goggle.machine_tier",
+                                TierNames.colored(realTier))
+                        .withStyle(ChatFormatting.GRAY),
+                Component.translatable("more_formula.goggle.running_tier",
+                                TierNames.colored(effective))
+                        .withStyle(ChatFormatting.GRAY));
     }
 
     /**
